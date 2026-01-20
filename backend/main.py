@@ -7,6 +7,8 @@ from datetime import timedelta
 from fastapi import Body
 from auth import get_password_hash
 from fastapi import Path
+from ml.ml_model import predict_category
+
 
 
 import models, database, schemas, auth
@@ -168,17 +170,57 @@ def update_ticket_status(
     db.refresh(ticket)
     return {"message": f"Ticket {ticket.id} status updated to {status}"}
 
+@app.put("/tickets/{ticket_id}/category", response_model=schemas.TicketResponse)
+def update_ticket_category(
+    ticket_id: int,
+    category: str = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Admin can always change
+    if current_user.role == "admin":
+        pass
+
+    # Technician can only change assigned tickets
+    elif current_user.role == "technician":
+        if ticket.technician_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not assigned to this ticket")
+
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    ticket.category = category
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
 @app.post("/tickets", response_model=schemas.TicketResponse)
 def create_ticket(
     ticket: schemas.TicketCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    db_ticket = models.Ticket(**ticket.dict(), user_id=current_user.id)
+    # 🔹 ML prediction
+    predicted_category = predict_category(ticket.description)
+
+    db_ticket = models.Ticket(
+        title=ticket.title,
+        description=ticket.description,
+        category=predicted_category,  # 🔥 ML result
+        status="Open",
+        user_id=current_user.id
+    )
+
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
     return db_ticket
+
 
 # Assign a ticket to a technician (admin only)
 @app.put("/tickets/{ticket_id}/assign/{technician_id}", response_model=schemas.TicketResponse)
