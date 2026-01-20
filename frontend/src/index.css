@@ -1,0 +1,147 @@
+/* index.css - gloabl styling */
+
+/* Global background and font */
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(to bottom right, #f0f9ff, #e0f2fe);
+}
+
+/* Ticket form card */
+.ticket-card {
+  max-width: 400px;
+  margin: 4rem auto;
+  padding: 2rem;
+  border-radius: 2rem;
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+}
+
+/* Form heading */
+.ticket-card h2 {
+  text-align: center;
+  font-size: 1.8rem;
+  color: #1e3a8a;
+  margin-bottom: 1.5rem;
+}
+
+/* Form layout */
+.ticket-form {
+  display: flex;
+  flex-direction: column; /* Stack vertically */
+  gap: 1rem; /* Space between inputs and button */
+}
+
+/* Inputs and textarea */
+.ticket-input {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.ticket-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+}
+
+/* Button */
+.ticket-button {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: none;
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.ticket-button:hover {
+  background-color: #2563eb;
+  box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+}
+
+/* Success / error message */
+.ticket-message {
+  text-align: center;
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+.ticket-message.success {
+  color: #16a34a;
+}
+
+.ticket-message.error {
+  color: #dc2626;
+}
+
+
+.ticket-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ticket-item {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 0;
+}
+
+
+.navbar {
+  width: 400px; /* fixed or desired width */
+  background-color: #3b82f6;
+  padding: 1rem 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  
+  /* Center horizontally */
+  margin: 1rem auto; /* top/bottom margin 1rem, left/right auto */
+}
+
+
+
+
+.nav-list {
+  display: flex;
+  justify-content: center; /* center links */
+  gap: 2rem;               /* space between links */
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+
+.nav-list li a {
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-list li a:hover {
+  text-decoration: underline;
+}
+
+
+.nav-item {
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.2); /* subtle hover highlight */
+}
+
+.nav-item.active {
+  background-color: rgba(255, 255, 255, 0.35); /* highlight active tab */
+}
