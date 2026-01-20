@@ -13,6 +13,9 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String, default="user")
 
+    #  NEW: technician speciality
+    speciality = Column(String, nullable=True)
+
     # Distinguish between tickets created and assigned
     created_tickets = relationship(
         "Ticket",

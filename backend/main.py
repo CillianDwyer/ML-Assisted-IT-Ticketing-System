@@ -47,13 +47,23 @@ def seed_default_users():
         db.add(admin_user)
 
     # Technician account
-    if not db.query(models.User).filter(models.User.email == tech_email).first():
-        tech_user = models.User(
-            email=tech_email,
-            hashed_password=get_password_hash("tech123"),  # password: tech123
-            role="technician"
-        )
-        db.add(tech_user)
+    technicians = [
+    ("hardware@example.com", "Hardware"),
+    ("passwordrest@example.com", "Password Reset"),
+    ("software@example.com", "Software"),
+    ("access@example.com", "Access"),
+    ("network@example.com", "Network"),
+    ]
+
+    for email, speciality in technicians:
+        if not db.query(models.User).filter(models.User.email == email).first():
+            tech = models.User(
+                email=email,
+                hashed_password=get_password_hash("tech123"),
+                role="technician",
+                speciality=speciality
+            )
+            db.add(tech)
 
     db.commit()
     db.close()
@@ -181,22 +191,33 @@ def update_ticket_category(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Admin can always change
+    # 🔐 Authorization
     if current_user.role == "admin":
         pass
-
-    # Technician can only change assigned tickets
     elif current_user.role == "technician":
         if ticket.technician_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not assigned to this ticket")
-
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    # 🔁 Re-route ticket if category changes
+    technician = (
+        db.query(models.User)
+        .filter(
+            models.User.role == "technician",
+            models.User.speciality == category
+        )
+        .first()
+    )
+
     ticket.category = category
+    ticket.technician_id = technician.id if technician else None
+    ticket.status = "Assigned" if technician else "Open"
+
     db.commit()
     db.refresh(ticket)
     return ticket
+
 
 
 @app.post("/tickets", response_model=schemas.TicketResponse)
@@ -208,13 +229,26 @@ def create_ticket(
     # 🔹 ML prediction
     predicted_category = predict_category(ticket.description)
 
+
+    # 🔹 Find available technician for category
+    technician = (
+        db.query(models.User)
+        .filter(
+            models.User.role == "technician",
+            models.User.speciality == predicted_category
+        )
+        .first()
+    )
+
     db_ticket = models.Ticket(
         title=ticket.title,
         description=ticket.description,
-        category=predicted_category,  # 🔥 ML result
-        status="Open",
-        user_id=current_user.id
+        category=predicted_category,
+        status="Assigned" if technician else "Open",
+        user_id=current_user.id,
+        technician_id=technician.id if technician else None
     )
+
 
     db.add(db_ticket)
     db.commit()
