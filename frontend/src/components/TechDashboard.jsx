@@ -3,9 +3,7 @@ import api from "../api";
 
 function TechDashboard() {
   const [tickets, setTickets] = useState([]);
-
-  // Categories supported by the system
-  const categories = ["Hardware", "Software", "Network","Password Reset","Access"];
+  const [filter, setFilter] = useState("All");
 
   const fetchTickets = async () => {
     try {
@@ -20,85 +18,60 @@ function TechDashboard() {
     fetchTickets();
   }, []);
 
-  // Update ticket status
   const handleStatusChange = async (ticketId, newStatus) => {
     try {
       await api.put(`/tickets/${ticketId}/status`, { status: newStatus });
-      setTickets((prev) =>
-        prev.map((t) =>
-          t.id === ticketId ? { ...t, status: newStatus } : t
-        )
-      );
+      fetchTickets();
     } catch (error) {
       console.error("Error updating status:", error);
     }
   };
 
-  // Update ticket category (ML override)
-  const handleCategoryChange = async (ticketId, category) => {
-    try {
-      await api.put(`/tickets/${ticketId}/category`, { category });
-      setTickets((prev) =>
-        prev.map((t) =>
-          t.id === ticketId ? { ...t, category } : t
-        )
-      );
-    } catch (error) {
-      console.error("Error updating category:", error);
-      alert("Failed to update category");
-    }
-  };
+  const filteredTickets = tickets.filter((ticket) => {
+    if (filter === "All") return true;
+    return ticket.status === filter;
+  });
 
   return (
     <div className="ticket-card">
       <h2>My Assigned Tickets</h2>
 
-      {tickets.length === 0 ? (
-        <p>No tickets assigned yet.</p>
+      {/* Filters */}
+      <div className="ticket-filters">
+        {["All", "Open", "In Progress", "Closed"].map((status) => (
+          <button
+            key={status}
+            className={`filter-btn ${filter === status ? "active" : ""}`}
+            onClick={() => setFilter(status)}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
+      {filteredTickets.length === 0 ? (
+        <p>No tickets found.</p>
       ) : (
         <ul className="ticket-list">
-          {tickets.map((ticket) => (
+          {filteredTickets.map((ticket) => (
             <li key={ticket.id} className="ticket-item">
               <strong>{ticket.title}</strong>
               <p>{ticket.description}</p>
+              <p><b>Category:</b> {ticket.category}</p>
+              <p><b>Created by:</b> {ticket.user_email || "Unknown"}</p>
+              <p><b>Status:</b> {ticket.status}</p>
 
-              {/* Category override */}
-              <p>
-                <b>Category:</b>{" "}
-                <select
-                  value={ticket.category}
-                  onChange={(e) =>
-                    handleCategoryChange(ticket.id, e.target.value)
-                  }
-                  className="ticket-input"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </p>
-
-              <p>
-                <b>Created by:</b> {ticket.user_email || "Unknown"}
-              </p>
-
-              {/* Status update */}
-              <p>
-                <b>Status:</b>{" "}
-                <select
-                  value={ticket.status}
-                  onChange={(e) =>
-                    handleStatusChange(ticket.id, e.target.value)
-                  }
-                  className="ticket-input"
-                >
-                  <option value="Open">Open</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Closed">Closed</option>
-                </select>
-              </p>
+              <select
+                value={ticket.status}
+                onChange={(e) =>
+                  handleStatusChange(ticket.id, e.target.value)
+                }
+                className="ticket-input"
+              >
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Closed">Closed</option>
+              </select>
             </li>
           ))}
         </ul>

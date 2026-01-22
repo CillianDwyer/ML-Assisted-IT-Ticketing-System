@@ -145,3 +145,31 @@ body {
 .nav-item.active {
   background-color: rgba(255, 255, 255, 0.35); /* highlight active tab */
 }
+
+.ticket-filters {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #c7d2fe;
+  background-color: white;
+  color: #1e3a8a;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  background-color: #e0e7ff;
+}
+
+.filter-btn.active {
+  background-color: #1e3a8a;
+  color: white;
+  border-color: #1e3a8a;
+}
