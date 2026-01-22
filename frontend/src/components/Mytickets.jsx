@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api";
 
 function MyTickets() {
   const [tickets, setTickets] = useState([]);
   const [filter, setFilter] = useState("All");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -45,7 +47,11 @@ function MyTickets() {
       ) : (
         <ul className="ticket-list">
           {filteredTickets.map((ticket) => (
-            <li key={ticket.id} className="ticket-item">
+            <li
+              key={ticket.id}
+              className="ticket-item clickable"
+              onClick={() => navigate(`/tickets/${ticket.id}`)}
+            >
               <strong>{ticket.title}</strong>
               <p>{ticket.description}</p>
               <p>

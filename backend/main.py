@@ -1,17 +1,13 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, Depends, status
+from datetime import datetime, timedelta
+
+from fastapi import FastAPI, HTTPException, Depends, status, Body, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
-from fastapi import Body
-from auth import get_password_hash
-from fastapi import Path
-from ml.ml_model import predict_category
-
-
 
 import models, database, schemas, auth
+from ml.ml_model import predict_category
 
 app = FastAPI(title="IT Ticketing API")
 
@@ -29,37 +25,44 @@ app.add_middleware(
 
 models.Base.metadata.create_all(bind=database.engine)
 
-# Create default admin and technician users
-from auth import get_password_hash
+# ---------------------------
+# DB Dependency
+# ---------------------------
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
+# ---------------------------
+# Seed users
+# ---------------------------
 def seed_default_users():
     db = database.SessionLocal()
     admin_email = "admin@example.com"
-    tech_email = "tech@example.com"
 
-    # Admin account
     if not db.query(models.User).filter(models.User.email == admin_email).first():
         admin_user = models.User(
             email=admin_email,
-            hashed_password=get_password_hash("admin123"),  # password: admin123
+            hashed_password=auth.get_password_hash("admin123"),
             role="admin"
         )
         db.add(admin_user)
 
-    # Technician account
     technicians = [
-    ("hardware@example.com", "Hardware"),
-    ("passwordrest@example.com", "Password Reset"),
-    ("software@example.com", "Software"),
-    ("access@example.com", "Access"),
-    ("network@example.com", "Network"),
+        ("hardware@example.com", "Hardware"),
+        ("passwordrest@example.com", "Password Reset"),
+        ("software@example.com", "Software"),
+        ("access@example.com", "Access"),
+        ("network@example.com", "Network"),
     ]
 
     for email, speciality in technicians:
         if not db.query(models.User).filter(models.User.email == email).first():
             tech = models.User(
                 email=email,
-                hashed_password=get_password_hash("tech123"),
+                hashed_password=auth.get_password_hash("tech123"),
                 role="technician",
                 speciality=speciality
             )
@@ -70,14 +73,9 @@ def seed_default_users():
 
 seed_default_users()
 
-
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
+# ---------------------------
+# Auth
+# ---------------------------
 @app.post("/register", response_model=schemas.UserResponse)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing = auth.get_user_by_email(db, user.email)
@@ -85,11 +83,12 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_pw = auth.get_password_hash(user.password)
-    new_user = models.User(email=user.email, hashed_password=hashed_pw)
+    new_user = models.User(email=user.email, hashed_password=hashed_pw, role=user.role or "user")
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
+
 
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -104,15 +103,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "role": user.role  # Added role here
-        }
+        "user": {"id": user.id, "email": user.email, "role": user.role}
     }
 
-
-# Admin route: get all tickets
+# ---------------------------
+# Tickets - Views
+# ---------------------------
 @app.get("/tickets/all", response_model=list[schemas.TicketResponse])
 def get_all_tickets(
     current_user: models.User = Depends(auth.get_current_user),
@@ -128,6 +124,7 @@ def get_all_tickets(
             t.technician_email = db.query(models.User.email).filter(models.User.id == t.technician_id).scalar()
     return tickets
 
+
 @app.get("/tickets", response_model=list[schemas.TicketResponse])
 def get_tickets(
     current_user: models.User = Depends(auth.get_current_user),
@@ -140,7 +137,7 @@ def get_tickets(
             t.technician_email = db.query(models.User.email).filter(models.User.id == t.technician_id).scalar()
     return tickets
 
-#Technician: view tickets assigned to them
+
 @app.get("/tickets/assigned", response_model=list[schemas.TicketResponse])
 def get_assigned_tickets(
     current_user: models.User = Depends(auth.get_current_user),
@@ -155,35 +152,10 @@ def get_assigned_tickets(
         t.technician_email = current_user.email
     return tickets
 
-# Technician updates ticket status
-@app.put("/tickets/{ticket_id}/status")
-def update_ticket_status(
-    ticket_id: int = Path(..., description="ID of the ticket to update"),
-    status: str = Body(..., embed=True, description="New ticket status"),
-    current_user: models.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Only technicians (or admins) can update statuses
-    if current_user.role not in ["technician", "admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized to update status")
 
-    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
-    if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
-
-    # If technician, ensure it's assigned to them
-    if current_user.role == "technician" and ticket.technician_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You are not assigned to this ticket")
-
-    ticket.status = status
-    db.commit()
-    db.refresh(ticket)
-    return {"message": f"Ticket {ticket.id} status updated to {status}"}
-
-@app.put("/tickets/{ticket_id}/category", response_model=schemas.TicketResponse)
-def update_ticket_category(
+@app.get("/tickets/{ticket_id}", response_model=schemas.TicketResponse)
+def get_ticket_by_id(
     ticket_id: int,
-    category: str = Body(..., embed=True),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -191,52 +163,34 @@ def update_ticket_category(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # 🔐 Authorization
-    if current_user.role == "admin":
-        pass
-    elif current_user.role == "technician":
-        if ticket.technician_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not assigned to this ticket")
-    else:
+    # Role-based authorization
+    if current_user.role == "user" and ticket.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # 🔁 Re-route ticket if category changes
-    technician = (
-        db.query(models.User)
-        .filter(
-            models.User.role == "technician",
-            models.User.speciality == category
-        )
-        .first()
-    )
+    if current_user.role == "technician" and ticket.technician_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
-    ticket.category = category
-    ticket.technician_id = technician.id if technician else None
-    ticket.status = "Assigned" if technician else "Open"
+    # Populate emails
+    ticket.user_email = db.query(models.User.email).filter(models.User.id == ticket.user_id).scalar()
+    if ticket.technician_id:
+        ticket.technician_email = db.query(models.User.email).filter(models.User.id == ticket.technician_id).scalar()
 
-    db.commit()
-    db.refresh(ticket)
     return ticket
 
-
-
+# ---------------------------
+# Tickets - Create / Assign / Update
+# ---------------------------
 @app.post("/tickets", response_model=schemas.TicketResponse)
 def create_ticket(
     ticket: schemas.TicketCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    # 🔹 ML prediction
     predicted_category = predict_category(ticket.description)
 
-
-    # 🔹 Find available technician for category
     technician = (
         db.query(models.User)
-        .filter(
-            models.User.role == "technician",
-            models.User.speciality == predicted_category
-        )
+        .filter(models.User.role == "technician", models.User.speciality == predicted_category)
         .first()
     )
 
@@ -249,14 +203,12 @@ def create_ticket(
         technician_id=technician.id if technician else None
     )
 
-
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
     return db_ticket
 
 
-# Assign a ticket to a technician (admin only)
 @app.put("/tickets/{ticket_id}/assign/{technician_id}", response_model=schemas.TicketResponse)
 def assign_ticket(
     ticket_id: int,
@@ -282,11 +234,33 @@ def assign_ticket(
     return ticket
 
 
-# Technician updates ticket status
 @app.put("/tickets/{ticket_id}/status", response_model=schemas.TicketResponse)
 def update_ticket_status(
+    ticket_id: int = Path(..., description="ID of the ticket to update"),
+    status: str = Body(..., embed=True, description="New ticket status"),
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Admin can update any; technician only their assigned
+    if current_user.role == "technician" and ticket.technician_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not assigned to this ticket")
+    if current_user.role not in ["technician", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    ticket.status = status
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
+@app.put("/tickets/{ticket_id}/category", response_model=schemas.TicketResponse)
+def update_ticket_category(
     ticket_id: int,
-    status: str = Body(..., embed=True),
+    category: str = Body(..., embed=True),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -294,14 +268,27 @@ def update_ticket_status(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Only assigned technician or admin can update
-    if current_user.id != ticket.technician_id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized to update this ticket")
+    # Authorization
+    if current_user.role == "technician" and ticket.technician_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not assigned to this ticket")
+    if current_user.role not in ["technician", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
-    ticket.status = status
+    # Re-route ticket based on new category
+    technician = (
+        db.query(models.User)
+        .filter(models.User.role == "technician", models.User.speciality == category)
+        .first()
+    )
+
+    ticket.category = category
+    ticket.technician_id = technician.id if technician else None
+    ticket.status = "Assigned" if technician else "Open"
+
     db.commit()
     db.refresh(ticket)
     return ticket
+
 
 @app.get("/users", response_model=list[schemas.UserResponse])
 def get_all_users(
@@ -312,7 +299,58 @@ def get_all_users(
         raise HTTPException(status_code=403, detail="Only admins can view users")
     return db.query(models.User).all()
 
+# ---------------------------
+# Ticket Messages
+# ---------------------------
+@app.get("/tickets/{ticket_id}/messages", response_model=list[schemas.MessageResponse])
+def get_ticket_messages(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    messages = (
+        db.query(models.TicketMessage)
+        .filter(models.TicketMessage.ticket_id == ticket_id)
+        .all()
+    )
 
+    return [
+        {
+            "id": msg.id,
+            "content": msg.content,
+            "sender_id": msg.sender_id,
+            "sender_email": msg.sender.email,
+            "created_at": msg.created_at
+        }
+        for msg in messages
+    ]
+
+
+@app.post("/tickets/{ticket_id}/messages", response_model=schemas.MessageResponse)
+def add_ticket_message(
+    ticket_id: int,
+    message: schemas.MessageCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    new_message = models.TicketMessage(
+        content=message.content,
+        sender_id=current_user.id,
+        ticket_id=ticket_id,
+        created_at=datetime.utcnow().isoformat()
+    )
+
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+
+    return {
+        "id": new_message.id,
+        "content": new_message.content,
+        "sender_id": new_message.sender_id,
+        "sender_email": current_user.email,
+        "created_at": new_message.created_at
+    }
 
 @app.get("/")
 def read_root():

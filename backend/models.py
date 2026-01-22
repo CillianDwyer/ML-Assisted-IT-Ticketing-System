@@ -52,3 +52,17 @@ class Ticket(Base):
         back_populates="assigned_tickets",
         foreign_keys=[technician_id]
     )
+
+class TicketMessage(Base):
+    __tablename__ = "ticket_messages"
+
+    id = Column(Integer, primary_key=True)
+    content = Column(String, nullable=False)
+    created_at = Column(String)
+    
+    ticket_id = Column(Integer, ForeignKey("tickets.id"))
+    sender_id = Column(Integer, ForeignKey("users.id"))
+
+    ticket = relationship("Ticket")
+    sender = relationship("User")
+

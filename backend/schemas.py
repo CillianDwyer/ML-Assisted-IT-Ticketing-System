@@ -43,3 +43,19 @@ class TicketResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class MessageCreate(BaseModel):
+    content: str
+
+class MessageResponse(BaseModel):
+    id: int
+    content: str
+    sender_id: int
+    sender_email: str
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+

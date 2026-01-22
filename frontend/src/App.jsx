@@ -11,6 +11,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import AdminDashboard from "./components/AdminDashboard";
 import TechDashboard from "./components/TechDashboard";
+import TicketDetails from "./components/TicketDetails";
 import "./App.css";
 
 
@@ -57,6 +58,14 @@ function App() {
             element={
               <PrivateRoute>
                 <TechDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/tickets/:id"
+            element={
+              <PrivateRoute>
+                <TicketDetails />
               </PrivateRoute>
             }
           />
