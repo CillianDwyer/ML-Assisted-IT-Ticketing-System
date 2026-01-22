@@ -61,7 +61,7 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="ticket-card">
+    <div className="ticket-card dashboard-card">
       <h2>Admin Dashboard</h2>
       <p>View, assign, and manage all tickets.</p>
 
