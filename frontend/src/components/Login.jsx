@@ -30,7 +30,7 @@ function Login() {
   };
 
   return (
-    <div className="ticket-card">
+    <div className="ticket-card small">
       <h2>Login</h2>
       <form className="ticket-form" onSubmit={handleSubmit}>
         <input

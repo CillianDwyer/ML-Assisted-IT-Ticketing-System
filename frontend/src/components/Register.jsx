@@ -25,7 +25,7 @@ function Register() {
   };
 
   return (
-    <div className="ticket-card">
+    <div className="ticket-card small">
       <h2>Create an Account</h2>
       <form className="ticket-form" onSubmit={handleSubmit}>
         <input
