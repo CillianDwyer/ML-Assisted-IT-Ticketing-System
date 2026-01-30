@@ -1,7 +1,11 @@
-/* App.css — component styling */
+/* App.css — component styling + theme variables */
 
+/* =========================
+   THEME VARIABLES
+========================= */
 :root {
-  --bg: #f0f9ff;
+  /* Light mode */
+  --bg: linear-gradient(to bottom right, #f0f9ff, #e0f2fe);
   --card: rgba(255, 255, 255, 0.95);
   --text: #0f172a;
   --muted: #475569;
@@ -11,22 +15,41 @@
   --nav: #1e3a8a;
 
   --border: #e5e7eb;
+  --input-bg: #ffffff;
+  --input-text: #0f172a;
+  --placeholder: #64748b;
+
   --ring: rgba(59, 130, 246, 0.35);
 
   --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
 
-/* -----------------------------------
-   Layout helpers
------------------------------------ */
-.min-h-screen {
-  min-height: 100vh;
+/* 🌙 Dark mode */
+.dark {
+  --bg: radial-gradient(circle at top, #0b1220 0%, #020617 55%, #000 100%);
+  --card: #0b1220;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+
+  --primary: #60a5fa;
+  --primary-dark: #3b82f6;
+  --nav: #020617;
+
+  --border: #1e293b;
+  --input-bg: #0b1220;
+  --input-text: #e5e7eb;
+  --placeholder: #94a3b8;
+
+  --ring: rgba(96, 165, 250, 0.4);
+
+  --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 22px 70px rgba(0, 0, 0, 0.55);
 }
 
-/* -----------------------------------
-   Navbar
------------------------------------ */
+/* =========================
+   NAVBAR
+========================= */
 .navbar {
   width: 100%;
   background-color: var(--nav);
@@ -34,41 +57,87 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
-.nav-list {
+.nav-inner {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 0;
-  list-style: none;
 
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* LEFT nav links */
+.nav-list {
   display: flex;
   gap: 1.25rem;
   align-items: center;
   flex-wrap: wrap;
+
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
 .nav-item {
   color: white;
   text-decoration: none;
-  font-weight: 600;
-  padding: 0.35rem 0.6rem;
-  border-radius: 0.6rem;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.7rem;
+  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .nav-item:hover {
   background-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
 }
 
 .nav-item.active {
   background-color: rgba(255, 255, 255, 0.28);
 }
 
+/* RIGHT actions */
+.nav-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* 🌙 Theme toggle */
+.theme-toggle {
+  height: 34px;
+  width: 42px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 999px;
+
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.dark .theme-toggle {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Logout button */
 .nav-logout {
   border: none;
-  border-radius: 0.6rem;
-  padding: 0.35rem 0.7rem;
+  border-radius: 0.7rem;
+  padding: 0.35rem 0.8rem;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
 
   background-color: #dc2626;
   color: white;
@@ -78,15 +147,17 @@
 
 .nav-logout:hover {
   background-color: #b91c1c;
-  transform: scale(1.03);
+  transform: translateY(-1px);
 }
 
-/* -----------------------------------
-   Card
------------------------------------ */
+/* =========================
+   CARD
+========================= */
 .ticket-card {
   background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 16px;
+
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(6px);
 
@@ -97,22 +168,19 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.ticket-card:hover {
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
-}
-
-/* Use this for Login/Register */
 .ticket-card.small {
   max-width: 420px;
 }
 
-/* Headings */
 .ticket-card h2 {
   margin: 0 0 1rem 0;
   font-size: 1.75rem;
   color: var(--nav);
   letter-spacing: -0.02em;
+}
+
+.dark .ticket-card h2 {
+  color: #93c5fd;
 }
 
 .ticket-card p {
@@ -121,120 +189,95 @@
   line-height: 1.6;
 }
 
-/* -----------------------------------
-   Forms / Inputs
------------------------------------ */
+/* =========================
+   FORMS
+========================= */
 .ticket-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-top: 1rem;
 }
 
 .ticket-input,
-.ticket-form textarea,
+textarea,
 select {
   padding: 0.75rem 1rem;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: white;
-  font-size: 1rem;
-  outline: none;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  border: 1px solid var(--border);
+
+  background: var(--input-bg);
+  color: var(--input-text);
+
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .ticket-input:focus,
-.ticket-form textarea:focus,
+textarea:focus,
 select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--ring);
 }
 
-/* Primary button */
+::placeholder {
+  color: var(--placeholder);
+}
+
+/* =========================
+   BUTTONS
+========================= */
 .ticket-button {
   background-color: var(--primary);
   color: white;
   border: none;
   border-radius: 10px;
   padding: 0.8rem 1.1rem;
+  font-weight: 800;
   cursor: pointer;
-  font-weight: 700;
-  transition: background-color 0.15s ease, transform 0.15s ease,
-    box-shadow 0.15s ease;
+
+  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .ticket-button:hover {
   background-color: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(59, 130, 246, 0.25);
 }
 
-/* -----------------------------------
-   Messages
------------------------------------ */
-.ticket-message {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  border-radius: 10px;
-  text-align: center;
-  font-weight: 600;
-}
-
-.ticket-message.success {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.ticket-message.error {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-/* -----------------------------------
-   Filters
------------------------------------ */
+/* =========================
+   FILTERS
+========================= */
 .ticket-filters {
   display: flex;
   gap: 0.75rem;
-  margin: 1rem 0 1.5rem 0;
-  flex-wrap: wrap;
+  margin: 1rem 0;
 }
 
 .filter-btn {
   padding: 0.45rem 0.9rem;
   border-radius: 999px;
-  border: 1px solid #c7d2fe;
-  background-color: white;
-  color: #1e3a8a;
-  font-size: 0.85rem;
-  font-weight: 700;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-weight: 800;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    border-color 0.15s ease, transform 0.15s ease;
-}
-
-.filter-btn:hover {
-  background-color: #e0e7ff;
-  transform: translateY(-1px);
 }
 
 .filter-btn.active {
-  background-color: #1e3a8a;
+  background: var(--primary);
   color: white;
-  border-color: #1e3a8a;
+  border-color: var(--primary);
 }
 
-/* -----------------------------------
-   Ticket list
------------------------------------ */
+
+/* =========================
+   TICKET LIST (MyTickets / TechDashboard)
+========================= */
 .ticket-list {
   list-style: none;
   padding: 0;
-  margin-top: 1rem;
+  margin: 1rem 0 0 0;
 }
 
 .ticket-item {
-  background: #f9fafb;
+  background: rgba(249, 250, 251, 0.9);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem;
@@ -242,9 +285,17 @@ select:focus {
   text-align: left;
 }
 
+.dark .ticket-item {
+  background: rgba(15, 23, 42, 0.6);
+}
+
 .ticket-item strong {
   font-size: 1.1rem;
   color: #1e40af;
+}
+
+.dark .ticket-item strong {
+  color: #93c5fd;
 }
 
 .ticket-item p {
@@ -252,6 +303,7 @@ select:focus {
   color: var(--muted);
 }
 
+/* Clickable hover */
 .clickable {
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease,
@@ -264,14 +316,19 @@ select:focus {
   box-shadow: var(--shadow-sm);
 }
 
-/* -----------------------------------
-   Admin table
------------------------------------ */
+.dark .clickable:hover {
+  background-color: rgba(96, 165, 250, 0.08);
+}
+
+/* =========================
+   ADMIN TABLE
+========================= */
 .ticket-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1.25rem;
-  background: white;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
@@ -286,31 +343,40 @@ select:focus {
 }
 
 .ticket-table th {
-  background-color: #e0e7ff;
+  background-color: rgba(224, 231, 255, 0.9);
   color: #1e3a8a;
-  font-weight: 800;
+  font-weight: 900;
   text-transform: uppercase;
   font-size: 0.8rem;
   letter-spacing: 0.04em;
 }
 
+.dark .ticket-table th {
+  background-color: rgba(96, 165, 250, 0.14);
+  color: #cbd5e1;
+}
+
 .ticket-table tr:hover {
-  background-color: #f1f5ff;
+  background-color: rgba(241, 245, 255, 0.8);
+}
+
+.dark .ticket-table tr:hover {
+  background-color: rgba(96, 165, 250, 0.07);
 }
 
 .ticket-table td {
   font-size: 0.92rem;
 }
 
-/* Make select in table look nicer */
+/* dropdowns in table */
 .ticket-table select {
   width: 100%;
   min-width: 140px;
 }
 
-/* -----------------------------------
-   Status badges (optional use)
------------------------------------ */
+/* =========================
+   STATUS BADGES (optional)
+========================= */
 .status-badge {
   display: inline-block;
   padding: 0.25rem 0.6rem;
@@ -335,14 +401,14 @@ select:focus {
   color: #166534;
 }
 
-/* -----------------------------------
-   Ticket details + chat
------------------------------------ */
+/* =========================
+   TICKET DETAILS + CHAT
+========================= */
 .back-btn {
   background: none;
   border: none;
   color: var(--primary-dark);
-  font-weight: 800;
+  font-weight: 900;
   cursor: pointer;
   margin-bottom: 1rem;
   padding: 0;
@@ -350,10 +416,6 @@ select:focus {
 
 .back-btn:hover {
   text-decoration: underline;
-}
-
-.ticket-details p {
-  margin-top: 0.5rem;
 }
 
 .ticket-meta {
@@ -369,13 +431,19 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: #f9fafb;
+
+  background: rgba(249, 250, 251, 0.9);
   padding: 1rem;
   border-radius: 14px;
   max-height: 420px;
   overflow-y: auto;
+
   border: 1px solid var(--border);
   margin: 1rem 0;
+}
+
+.dark .chat-box {
+  background: rgba(15, 23, 42, 0.55);
 }
 
 .chat-message {
@@ -394,7 +462,7 @@ select:focus {
 
 .chat-sender {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--muted);
   margin-bottom: 4px;
 }
 
@@ -410,15 +478,27 @@ select:focus {
   background: #dcfce7;
 }
 
+.dark .chat-message.left .chat-content {
+  background: rgba(96, 165, 250, 0.14);
+  color: var(--text);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+}
+
+.dark .chat-message.right .chat-content {
+  background: rgba(34, 197, 94, 0.14);
+  color: var(--text);
+  border: 1px solid rgba(34, 197, 94, 0.18);
+}
+
 .chat-time {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--muted);
   margin-top: 4px;
 }
 
-/* -----------------------------------
-   Logout confirmation popup
------------------------------------ */
+/* =========================
+   LOGOUT POPUP
+========================= */
 .logout-overlay {
   position: fixed;
   inset: 0;
@@ -430,7 +510,8 @@ select:focus {
 }
 
 .logout-popup {
-  background: white;
+  background: var(--card);
+  border: 1px solid var(--border);
   padding: 2rem;
   border-radius: 14px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
@@ -441,7 +522,7 @@ select:focus {
 
 .logout-popup h3 {
   margin: 0 0 1.25rem 0;
-  color: var(--nav);
+  color: var(--text);
   font-weight: 900;
 }
 
@@ -457,7 +538,7 @@ select:focus {
   border-radius: 10px;
   padding: 0.6rem 1rem;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 900;
   transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
@@ -480,6 +561,16 @@ select:focus {
   background-color: #dc2626;
   transform: translateY(-1px);
 }
+
+.filter-btn:hover {
+  transform: translateY(-1px);
+}
+
+.dark .filter-btn {
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--text);
+}
+
 
 @keyframes fadeIn {
   from {

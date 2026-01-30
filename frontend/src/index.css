@@ -15,8 +15,13 @@ body {
   margin: 0;
   font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial,
     sans-serif;
-  color: #0f172a;
-  background: linear-gradient(to bottom right, #f0f9ff, #e0f2fe);
+
+  /*  Dark-mode friendly (uses CSS variables) */
+  background: var(--bg);
+  color: var(--text);
+
+  transition: background-color 0.25s ease, color 0.25s ease,
+    background 0.25s ease;
 }
 
 a {
