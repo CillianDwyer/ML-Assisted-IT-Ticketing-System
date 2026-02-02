@@ -1,35 +1,42 @@
-# Data validation and API responce models
-# Defines what data the API accepst and returns usimg pydantic
+# Data validation and API response models
+# Defines what data the API accepts and returns using Pydantic
 
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
-#Required data when registering a user
+
+# Required data when registering a user
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
     role: Optional[str] = "user"  # allow creating admins/techs manually
 
-#data returned to frontend for any user
+
+# Data returned to frontend for any user
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
     role: str
+
     class Config:
         from_attributes = True
 
-#shared field for tickets
+
+# Shared fields for tickets
 class TicketBase(BaseModel):
     title: str
     description: str
     category: Optional[str] = "Uncategorized"
     status: Optional[str] = "Open"
 
-#data needed to submit a ticket (just pass for now)
+
+# Data needed to submit a ticket
 class TicketCreate(TicketBase):
     pass
 
-#what API returns when sending ticket data
+
+# What API returns when sending ticket data
 class TicketResponse(BaseModel):
     id: int
     title: str
@@ -42,11 +49,12 @@ class TicketResponse(BaseModel):
     technician_email: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class MessageCreate(BaseModel):
     content: str
+
 
 class MessageResponse(BaseModel):
     id: int
@@ -59,3 +67,16 @@ class MessageResponse(BaseModel):
         from_attributes = True
 
 
+# ---------------------------
+# Notifications
+# ---------------------------
+class NotificationResponse(BaseModel):
+    id: int
+    type: str
+    ticket_id: Optional[int] = None
+    content: str
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

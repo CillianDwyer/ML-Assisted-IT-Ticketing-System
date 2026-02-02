@@ -1,9 +1,12 @@
-# modles.py
+# models.py
 # Classes represent database tables
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -13,7 +16,7 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String, default="user")
 
-    #  NEW: technician speciality
+    # NEW: technician speciality
     speciality = Column(String, nullable=True)
 
     # Distinguish between tickets created and assigned
@@ -26,6 +29,12 @@ class User(Base):
         "Ticket",
         back_populates="technician",
         foreign_keys="Ticket.technician_id"
+    )
+
+    # NEW: notifications for this user
+    notifications = relationship(
+        "Notification",
+        back_populates="user"
     )
 
 
@@ -53,16 +62,46 @@ class Ticket(Base):
         foreign_keys=[technician_id]
     )
 
+    # NEW: notifications related to this ticket (optional, but useful)
+    notifications = relationship(
+        "Notification",
+        back_populates="ticket"
+    )
+
+
 class TicketMessage(Base):
     __tablename__ = "ticket_messages"
 
     id = Column(Integer, primary_key=True)
     content = Column(String, nullable=False)
     created_at = Column(String)
-    
+
     ticket_id = Column(Integer, ForeignKey("tickets.id"))
     sender_id = Column(Integer, ForeignKey("users.id"))
 
     ticket = relationship("Ticket")
     sender = relationship("User")
 
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Who receives the notification
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+
+    # "message", "assignment", "status"
+    type = Column(String, nullable=False)
+
+    # Optional link to a ticket
+    ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=True, index=True)
+
+    # Short text shown in the UI
+    content = Column(String, nullable=False)
+
+    is_read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="notifications")
+    ticket = relationship("Ticket", back_populates="notifications")

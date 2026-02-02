@@ -74,6 +74,26 @@ def seed_default_users():
 seed_default_users()
 
 # ---------------------------
+# Helpers: Notifications
+# ---------------------------
+def create_notification(
+    db: Session,
+    user_id: int,
+    type: str,
+    content: str,
+    ticket_id: int | None = None
+):
+    notif = models.Notification(
+        user_id=user_id,
+        type=type,
+        content=content,
+        ticket_id=ticket_id,
+        is_read=False
+    )
+    db.add(notif)
+    return notif
+
+# ---------------------------
 # Auth
 # ---------------------------
 @app.post("/register", response_model=schemas.UserResponse)
@@ -105,6 +125,80 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "token_type": "bearer",
         "user": {"id": user.id, "email": user.email, "role": user.role}
     }
+
+# ---------------------------
+# Notifications
+# ---------------------------
+@app.get("/notifications/unread-count")
+def get_unread_notification_count(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    count = (
+        db.query(models.Notification)
+        .filter(
+            models.Notification.user_id == current_user.id,
+            models.Notification.is_read == False
+        )
+        .count()
+    )
+    return {"count": count}
+
+
+@app.get("/notifications", response_model=list[schemas.NotificationResponse])
+def list_notifications(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = 20
+):
+    notifs = (
+        db.query(models.Notification)
+        .filter(models.Notification.user_id == current_user.id)
+        .order_by(models.Notification.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return notifs
+
+
+@app.put("/notifications/{notification_id}/read", response_model=schemas.NotificationResponse)
+def mark_notification_read(
+    notification_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    notif = (
+        db.query(models.Notification)
+        .filter(
+            models.Notification.id == notification_id,
+            models.Notification.user_id == current_user.id
+        )
+        .first()
+    )
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    notif.is_read = True
+    db.commit()
+    db.refresh(notif)
+    return notif
+
+
+@app.put("/notifications/read-all")
+def mark_all_notifications_read(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    (
+        db.query(models.Notification)
+        .filter(
+            models.Notification.user_id == current_user.id,
+            models.Notification.is_read == False
+        )
+        .update({"is_read": True})
+    )
+    db.commit()
+    return {"success": True}
 
 # ---------------------------
 # Tickets - Views
@@ -208,6 +302,18 @@ def create_ticket(
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
+
+    # 🔔 Notify technician if auto-assigned
+    if db_ticket.technician_id:
+        create_notification(
+            db,
+            user_id=db_ticket.technician_id,
+            type="assignment",
+            content=f"New ticket assigned: #{db_ticket.id} — {db_ticket.title}",
+            ticket_id=db_ticket.id
+        )
+        db.commit()
+
     return db_ticket
 
 
@@ -232,12 +338,22 @@ def assign_ticket(
     ticket.technician_id = technician_id
 
     # ✅ Do NOT set status="Assigned"
-    # Keep existing status; if missing, default to Open.
     if not ticket.status:
         ticket.status = "Open"
 
     db.commit()
     db.refresh(ticket)
+
+    # 🔔 Notify technician of assignment
+    create_notification(
+        db,
+        user_id=technician_id,
+        type="assignment",
+        content=f"Ticket assigned to you: #{ticket.id} — {ticket.title}",
+        ticket_id=ticket.id
+    )
+    db.commit()
+
     return ticket
 
 
@@ -266,6 +382,25 @@ def update_ticket_status(
     ticket.status = status
     db.commit()
     db.refresh(ticket)
+
+    # 🔔 Notify other participants (not the actor)
+    recipients = set()
+    if ticket.user_id and ticket.user_id != current_user.id:
+        recipients.add(ticket.user_id)
+    if ticket.technician_id and ticket.technician_id != current_user.id:
+        recipients.add(ticket.technician_id)
+
+    for uid in recipients:
+        create_notification(
+            db,
+            user_id=uid,
+            type="status",
+            content=f"Ticket #{ticket.id} status updated to '{ticket.status}'",
+            ticket_id=ticket.id
+        )
+    if recipients:
+        db.commit()
+
     return ticket
 
 
@@ -286,23 +421,34 @@ def update_ticket_category(
     if current_user.role not in ["technician", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Re-route ticket based on new category
     technician = (
         db.query(models.User)
         .filter(models.User.role == "technician", models.User.speciality == category)
         .first()
     )
 
+    previous_technician_id = ticket.technician_id
+
     ticket.category = category
     ticket.technician_id = technician.id if technician else None
 
-    # ✅ Do NOT set status="Assigned"
-    # Keep existing status; if missing, default to Open.
     if not ticket.status:
         ticket.status = "Open"
 
     db.commit()
     db.refresh(ticket)
+
+    # 🔔 If rerouted to a different technician, notify the new assignee
+    if ticket.technician_id and ticket.technician_id != previous_technician_id:
+        create_notification(
+            db,
+            user_id=ticket.technician_id,
+            type="assignment",
+            content=f"Ticket assigned to you: #{ticket.id} — {ticket.title}",
+            ticket_id=ticket.id
+        )
+        db.commit()
+
     return ticket
 
 
@@ -349,6 +495,10 @@ def add_ticket_message(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
     new_message = models.TicketMessage(
         content=message.content,
         sender_id=current_user.id,
@@ -359,6 +509,24 @@ def add_ticket_message(
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
+
+    # 🔔 Notify other participants (not the sender)
+    recipients = set()
+    if ticket.user_id and ticket.user_id != current_user.id:
+        recipients.add(ticket.user_id)
+    if ticket.technician_id and ticket.technician_id != current_user.id:
+        recipients.add(ticket.technician_id)
+
+    for uid in recipients:
+        create_notification(
+            db,
+            user_id=uid,
+            type="message",
+            content=f"New message on ticket #{ticket.id}: {ticket.title}",
+            ticket_id=ticket.id
+        )
+    if recipients:
+        db.commit()
 
     return {
         "id": new_message.id,

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import api from "../api";
 
 function Navbar() {
   const token = localStorage.getItem("token");
@@ -14,6 +15,13 @@ function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
+  // Notifications dropdown
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const notifRef = useRef(null);
+
   // 🌙 Dark mode state
   const [darkMode, setDarkMode] = useState(
     localStorage.getItem("theme") === "dark"
@@ -26,16 +34,97 @@ function Navbar() {
     }
   }, []);
 
-  // Close dropdown on outside click / Esc
+  // Helper: nicer role label
+  const roleLabel =
+    role === "admin" ? "Admin" : role === "technician" ? "Technician" : "User";
+
+  // ---- Notifications: API calls ----
+  const fetchUnreadCount = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get("/notifications/unread-count");
+      setNotifCount(res.data?.count ?? 0);
+    } catch {
+      // silent (polling)
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (!token) return;
+    setNotifLoading(true);
+    try {
+      const res = await api.get("/notifications?limit=20");
+      setNotifications(res.data || []);
+    } catch (e) {
+      console.error("Failed to load notifications:", e);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await api.put("/notifications/read-all");
+      setNotifCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    } catch (e) {
+      console.error("Failed to mark all read:", e);
+    }
+  };
+
+  const openNotification = async (n) => {
+    try {
+      if (!n.is_read) {
+        await api.put(`/notifications/${n.id}/read`);
+      }
+    } catch {
+      // ignore
+    }
+
+    setNotifications((prev) =>
+      prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
+    );
+
+    fetchUnreadCount();
+    setNotifOpen(false);
+
+    if (n.ticket_id) navigate(`/tickets/${n.ticket_id}`);
+  };
+
+  // Poll unread count every 15 seconds
+  useEffect(() => {
+    if (!token) {
+      setNotifCount(0);
+      setNotifications([]);
+      return;
+    }
+
+    fetchUnreadCount(); // initial
+    const id = setInterval(fetchUnreadCount, 15000);
+    return () => clearInterval(id);
+  }, [token]);
+
+  // Load list when opening dropdown
+  useEffect(() => {
+    if (notifOpen) fetchNotifications();
+  }, [notifOpen]);
+
+  // Close dropdowns on outside click / Esc
   useEffect(() => {
     const onClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
     };
 
     const onEsc = (e) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setNotifOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", onClickOutside);
@@ -64,6 +153,7 @@ function Navbar() {
   const handleLogout = () => {
     setShowConfirm(false);
     setMenuOpen(false);
+    setNotifOpen(false);
 
     setTimeout(() => {
       localStorage.removeItem("token");
@@ -72,10 +162,6 @@ function Navbar() {
       navigate("/login");
     }, 200);
   };
-
-  // Helper: nicer role label
-  const roleLabel =
-    role === "admin" ? "Admin" : role === "technician" ? "Technician" : "User";
 
   return (
     <>
@@ -175,12 +261,76 @@ function Navbar() {
 
           {/* RIGHT: Actions */}
           <div className="nav-actions">
+            {/* 🔔 Notifications (only when logged in) */}
+            {token && (
+              <div className="notif-wrap" ref={notifRef}>
+                <button
+                  className="notif-btn"
+                  title="Notifications"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setNotifOpen((v) => !v);
+                  }}
+                  aria-haspopup="menu"
+                  aria-expanded={notifOpen}
+                >
+                  🔔
+                  {notifCount > 0 && (
+                    <span className="notif-badge">
+                      {notifCount > 99 ? "99+" : notifCount}
+                    </span>
+                  )}
+                </button>
+
+                {notifOpen && (
+                  <div className="notif-dropdown" role="menu">
+                    <div className="notif-header">
+                      <span>Notifications</span>
+                      <button
+                        className="notif-clear"
+                        onClick={markAllRead}
+                        disabled={notifCount === 0}
+                        title="Mark all as read"
+                      >
+                        Mark all read
+                      </button>
+                    </div>
+
+                    <div className="notif-list">
+                      {notifLoading ? (
+                        <div className="notif-empty">Loading…</div>
+                      ) : notifications.length === 0 ? (
+                        <div className="notif-empty">No notifications yet.</div>
+                      ) : (
+                        notifications.map((n) => (
+                          <button
+                            key={n.id}
+                            className={`notif-item ${n.is_read ? "" : "unread"}`}
+                            onClick={() => openNotification(n)}
+                            role="menuitem"
+                          >
+                            <div className="notif-text">{n.content}</div>
+                            <div className="notif-time">
+                              {new Date(n.created_at).toLocaleString()}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* User menu (only when logged in) */}
             {token && (
               <div className="user-menu" ref={menuRef}>
                 <button
                   className="user-chip"
-                  onClick={() => setMenuOpen((v) => !v)}
+                  onClick={() => {
+                    setNotifOpen(false);
+                    setMenuOpen((v) => !v);
+                  }}
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                   title="Account menu"
