@@ -194,11 +194,13 @@ def create_ticket(
         .first()
     )
 
+    # ✅ Status should only be: Open, In Progress, Closed
+    # Assignment is represented by technician_id, not a separate "Assigned" status.
     db_ticket = models.Ticket(
         title=ticket.title,
         description=ticket.description,
         category=predicted_category,
-        status="Assigned" if technician else "Open",
+        status="Open",
         user_id=current_user.id,
         technician_id=technician.id if technician else None
     )
@@ -228,7 +230,12 @@ def assign_ticket(
         raise HTTPException(status_code=404, detail="Technician not found")
 
     ticket.technician_id = technician_id
-    ticket.status = "Assigned"
+
+    # ✅ Do NOT set status="Assigned"
+    # Keep existing status; if missing, default to Open.
+    if not ticket.status:
+        ticket.status = "Open"
+
     db.commit()
     db.refresh(ticket)
     return ticket
@@ -250,6 +257,11 @@ def update_ticket_status(
         raise HTTPException(status_code=403, detail="Not assigned to this ticket")
     if current_user.role not in ["technician", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
+
+    # ✅ Enforce only these statuses
+    allowed_statuses = {"Open", "In Progress", "Closed"}
+    if status not in allowed_statuses:
+        raise HTTPException(status_code=400, detail="Invalid status")
 
     ticket.status = status
     db.commit()
@@ -283,7 +295,11 @@ def update_ticket_category(
 
     ticket.category = category
     ticket.technician_id = technician.id if technician else None
-    ticket.status = "Assigned" if technician else "Open"
+
+    # ✅ Do NOT set status="Assigned"
+    # Keep existing status; if missing, default to Open.
+    if not ticket.status:
+        ticket.status = "Open"
 
     db.commit()
     db.refresh(ticket)

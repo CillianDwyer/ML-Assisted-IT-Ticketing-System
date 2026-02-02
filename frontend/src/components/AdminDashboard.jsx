@@ -61,14 +61,15 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="ticket-card dashboard-card">
-      <h2>Admin Dashboard</h2>
-      <p>View, assign, and manage all tickets.</p>
+  <div className="ticket-card dashboard-card">
+    <h2>Admin Dashboard</h2>
+    <p>View, assign, and manage all tickets.</p>
 
-      {tickets.length === 0 ? (
-        <p>No tickets found.</p>
-      ) : (
-        <table className="ticket-table">
+    {tickets.length === 0 ? (
+      <p>No tickets found.</p>
+    ) : (
+      <div className="table-wrap">
+        <table className="ticket-table admin-table">
           <thead>
             <tr>
               <th>ID</th>
@@ -84,18 +85,19 @@ function AdminDashboard() {
             {tickets.map((t) => (
               <tr key={t.id}>
                 <td>{t.id}</td>
-                <td>{t.title}</td>
-                <td>{t.user_email || "Unknown"}</td>
-                <td>{t.technician_email || "Unassigned"}</td>
-                <td>{t.status}</td>
+                <td className="cell-title">{t.title}</td>
+                <td className="cell-email" title={t.user_email || ""}>
+                  {t.user_email || "Unknown"}
+                </td>
+                <td className="cell-email" title={t.technician_email || ""}>
+                  {t.technician_email || "Unassigned"}
+                </td>
+                <td className="cell-status">{t.status}</td>
 
-                {/* 🔹 Category override (human-in-the-loop) */}
                 <td>
                   <select
                     value={t.category}
-                    onChange={(e) =>
-                      updateCategory(t.id, e.target.value)
-                    }
+                    onChange={(e) => updateCategory(t.id, e.target.value)}
                   >
                     {categories.map((cat) => (
                       <option key={cat} value={cat}>
@@ -105,13 +107,10 @@ function AdminDashboard() {
                   </select>
                 </td>
 
-                {/* 🔹 Technician assignment */}
                 <td>
                   <select
                     defaultValue=""
-                    onChange={(e) =>
-                      assignTicket(t.id, e.target.value)
-                    }
+                    onChange={(e) => assignTicket(t.id, e.target.value)}
                   >
                     <option value="">Assign...</option>
                     {technicians.map((tech) => (
@@ -125,9 +124,10 @@ function AdminDashboard() {
             ))}
           </tbody>
         </table>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 }
 
 export default AdminDashboard;

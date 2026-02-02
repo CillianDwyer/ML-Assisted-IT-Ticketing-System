@@ -1,12 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 function Navbar() {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
+  const email = localStorage.getItem("email") || "Account";
+
   const navigate = useNavigate();
 
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // User menu dropdown
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   // 🌙 Dark mode state
   const [darkMode, setDarkMode] = useState(
@@ -18,6 +24,26 @@ function Navbar() {
     if (localStorage.getItem("theme") === "dark") {
       document.body.classList.add("dark");
     }
+  }, []);
+
+  // Close dropdown on outside click / Esc
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const onEsc = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onEsc);
+    };
   }, []);
 
   // Toggle dark mode
@@ -37,6 +63,8 @@ function Navbar() {
   // Logout logic
   const handleLogout = () => {
     setShowConfirm(false);
+    setMenuOpen(false);
+
     setTimeout(() => {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
@@ -44,6 +72,10 @@ function Navbar() {
       navigate("/login");
     }, 200);
   };
+
+  // Helper: nicer role label
+  const roleLabel =
+    role === "admin" ? "Admin" : role === "technician" ? "Technician" : "User";
 
   return (
     <>
@@ -114,7 +146,7 @@ function Navbar() {
               </NavLink>
             </li>
 
-            {!token ? (
+            {!token && (
               <>
                 <li>
                   <NavLink
@@ -138,20 +170,91 @@ function Navbar() {
                   </NavLink>
                 </li>
               </>
-            ) : (
-              <li>
-                <button
-                  onClick={() => setShowConfirm(true)}
-                  className="nav-logout"
-                >
-                  Logout
-                </button>
-              </li>
             )}
           </ul>
 
-          {/* RIGHT: Theme toggle */}
+          {/* RIGHT: Actions */}
           <div className="nav-actions">
+            {/* User menu (only when logged in) */}
+            {token && (
+              <div className="user-menu" ref={menuRef}>
+                <button
+                  className="user-chip"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  title="Account menu"
+                >
+                  <span className="user-email">{email}</span>
+                  <span className="user-role">{roleLabel}</span>
+                  <span className="user-caret">{menuOpen ? "▲" : "▼"}</span>
+                </button>
+
+                {menuOpen && (
+                  <div className="user-dropdown" role="menu">
+                    <div className="user-dropdown-header">
+                      <div className="user-dropdown-email">{email}</div>
+                      <div className="user-dropdown-role">{roleLabel}</div>
+                    </div>
+
+                    <div className="user-dropdown-divider" />
+
+                    {/* Quick links */}
+                    <button
+                      className="user-dropdown-item"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        navigate("/mytickets");
+                      }}
+                      role="menuitem"
+                    >
+                      My Tickets
+                    </button>
+
+                    {role === "admin" && (
+                      <button
+                        className="user-dropdown-item"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate("/admin");
+                        }}
+                        role="menuitem"
+                      >
+                        Admin Dashboard
+                      </button>
+                    )}
+
+                    {role === "technician" && (
+                      <button
+                        className="user-dropdown-item"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate("/tech");
+                        }}
+                        role="menuitem"
+                      >
+                        My Assignments
+                      </button>
+                    )}
+
+                    <div className="user-dropdown-divider" />
+
+                    <button
+                      className="user-dropdown-item danger"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setShowConfirm(true);
+                      }}
+                      role="menuitem"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 🌙 Theme toggle */}
             <button
               onClick={toggleDarkMode}
               className="theme-toggle"
@@ -172,10 +275,7 @@ function Navbar() {
               <button className="yes-btn" onClick={handleLogout}>
                 Yes
               </button>
-              <button
-                className="no-btn"
-                onClick={() => setShowConfirm(false)}
-              >
+              <button className="no-btn" onClick={() => setShowConfirm(false)}>
                 No
               </button>
             </div>

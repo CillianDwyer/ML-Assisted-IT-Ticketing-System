@@ -739,3 +739,265 @@ select:focus {
   }
 }
 
+/* =========================
+   USER MENU (Navbar)
+========================= */
+.user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 0.75rem;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  border: none;
+  cursor: pointer;
+
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.user-chip:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.user-email {
+  font-weight: 850;
+  font-size: 0.9rem;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  font-weight: 900;
+  opacity: 0.85;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.user-caret {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: min(280px, 85vw);
+
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  z-index: 2100;
+}
+
+.user-dropdown-header {
+  padding: 0.9rem 1rem;
+}
+
+.user-dropdown-email {
+  font-weight: 950;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.user-dropdown-role {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.user-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.user-dropdown-item {
+  width: 100%;
+  text-align: left;
+
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+
+  color: var(--text);
+  font-weight: 850;
+
+  transition: background-color 0.15s ease;
+}
+
+.user-dropdown-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.user-dropdown-item.danger {
+  color: #b91c1c;
+}
+
+.dark .user-dropdown-item.danger {
+  color: #fca5a5;
+}
+
+.user-dropdown-item.danger:hover {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+/* Small screens: hide long email */
+@media (max-width: 640px) {
+  .user-email {
+    max-width: 120px;
+  }
+}
+
+/* =========================
+   PAGE HEADERS
+========================= */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+
+  margin-bottom: 1.75rem;
+}
+
+.page-header-text h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.page-header-text p {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 1rem;
+  max-width: 640px;
+  line-height: 1.55;
+}
+
+.page-header-action {
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1.1rem;
+
+  font-weight: 900;
+  cursor: pointer;
+
+  background: var(--primary);
+  color: white;
+
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.page-header-action:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+/* Stack nicely on mobile */
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-header-action {
+    align-self: flex-start;
+  }
+}
+
+/* Make dashboard slightly wider if you want */
+.dashboard-card {
+  max-width: 1050px; /* optional */
+}
+
+/* Use wrapper as the table container (clipped & scrollable) */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  background: var(--card);
+}
+
+/* Remove radius/shadow from the table itself (wrapper handles it) */
+.ticket-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0;         /* important so it doesn't "float" */
+  border: none;          /* wrapper has border */
+  border-radius: 0;      /* wrapper has radius */
+  box-shadow: none;      /* wrapper has shadow */
+  overflow: visible;
+  background: transparent;
+}
+
+/* Make columns behave */
+.admin-table {
+  table-layout: fixed; /* stops long emails blowing up layout */
+}
+
+/* Set reasonable widths */
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) { width: 60px; }   /* ID */
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) { width: 120px; }  /* Status */
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6) { width: 180px; }  /* Category */
+.admin-table th:nth-child(7),
+.admin-table td:nth-child(7) { width: 180px; }  /* Assign */
+
+/* Keep long text tidy */
+.cell-email,
+.cell-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-title {
+  font-weight: 800;
+}
+
+/* Optional: tighten row height slightly */
+.ticket-table th,
+.ticket-table td {
+  padding: 0.75rem 0.9rem;
+}
+
+/* Sticky header feels “real app” */
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Make selects smaller in table */
+.ticket-table select {
+  min-width: 0;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+}
+
