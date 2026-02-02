@@ -582,3 +582,160 @@ select:focus {
     transform: scale(1);
   }
 }
+
+/* =========================
+   APP LAYOUT SHELL (NEW)
+========================= */
+.app-shell {
+  min-height: calc(100vh - 72px); /* navbar height buffer (tweak if needed) */
+  padding: 2rem 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Responsive padding */
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 1.25rem 1rem;
+  }
+
+  .ticket-card {
+    padding: 1.5rem;
+    margin: 1.25rem auto;
+  }
+}
+
+/* =========================
+   FILTERS (IMPROVED)
+========================= */
+.ticket-filters {
+  flex-wrap: wrap; /* ✅ allows wrapping on mobile */
+}
+
+/* =========================
+   ADMIN TABLE RESPONSIVE WRAP (NEW)
+========================= */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+}
+
+/* Optional: slightly nicer table on very small screens */
+@media (max-width: 640px) {
+  .ticket-table th,
+  .ticket-table td {
+    padding: 0.7rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+.app-footer {
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.dark .app-footer {
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.footer-brand {
+  min-width: 240px;
+}
+
+.footer-logo {
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.footer-sub {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 2.25rem;
+  flex-wrap: wrap;
+}
+
+.footer-col {
+  min-width: 160px;
+}
+
+.footer-title {
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 0.65rem;
+  font-size: 0.9rem;
+}
+
+.footer-link {
+  display: block;
+  text-decoration: none;
+  color: var(--muted);
+  padding: 0.25rem 0;
+  border-radius: 10px;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.footer-link:hover {
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.footer-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-top: 0.25rem;
+}
+
+.footer-bottom {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.9rem 1.5rem 1.25rem;
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.footer-dot {
+  opacity: 0.6;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .footer-inner {
+    padding: 1.5rem 1rem;
+  }
+  .footer-bottom {
+    padding: 0.85rem 1rem 1.1rem;
+    flex-wrap: wrap;
+  }
+}
+

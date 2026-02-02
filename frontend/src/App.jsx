@@ -1,11 +1,12 @@
-//Main react componenet
-//Defines all routs (pages) 
-//wraps pages with private route so only logged in users can access them
+// Main react component
+// Defines all routes (pages)
+// Wraps protected pages with PrivateRoute so only logged-in users can access them
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer"; // ✅ NEW
 import TicketForm from "./components/TicketForm";
-import MyTickets from "./components/Mytickets";
+import MyTickets from "./components/MyTickets"; // ✅ fixed casing
 import About from "./components/About";
 import Login from "./components/Login";
 import Register from "./components/Register";
@@ -13,7 +14,6 @@ import AdminDashboard from "./components/AdminDashboard";
 import TechDashboard from "./components/TechDashboard";
 import TicketDetails from "./components/TicketDetails";
 import "./App.css";
-
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -24,7 +24,9 @@ function App() {
   return (
     <Router>
       <Navbar />
-      <div className="min-h-screen p-6 bg-blue-50">
+
+      {/* ✅ Use theme-based layout wrapper instead of Tailwind classes */}
+      <div className="app-shell">
         <Routes>
           <Route
             path="/"
@@ -34,6 +36,7 @@ function App() {
               </PrivateRoute>
             }
           />
+
           <Route
             path="/mytickets"
             element={
@@ -42,9 +45,11 @@ function App() {
               </PrivateRoute>
             }
           />
+
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
           <Route
             path="/admin"
             element={
@@ -53,6 +58,7 @@ function App() {
               </PrivateRoute>
             }
           />
+
           <Route
             path="/tech"
             element={
@@ -61,6 +67,7 @@ function App() {
               </PrivateRoute>
             }
           />
+
           <Route
             path="/tickets/:id"
             element={
@@ -71,6 +78,9 @@ function App() {
           />
         </Routes>
       </div>
+
+      {/* ✅ NEW */}
+      <Footer />
     </Router>
   );
 }
