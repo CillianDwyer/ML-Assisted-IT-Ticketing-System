@@ -625,6 +625,56 @@ def add_ticket_message(
         "created_at": new_message.created_at
     }
 
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    # lightweight DB check
+    try:
+        db.execute("SELECT 1")
+        return {"status": "ok", "db": "ok"}
+    except Exception:
+        return {"status": "degraded", "db": "error"}
+    
+@app.get("/public/metrics")
+def public_metrics(
+    days: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db)
+):
+    # Active tickets: anything not closed
+    active_tickets = (
+        db.query(models.Ticket)
+        .filter(models.Ticket.status != "Closed")
+        .count()
+    )
+
+    # Avg resolution time in hours for tickets closed in the last N days
+    start = datetime.utcnow() - timedelta(days=days)
+
+    avg_resolution_hours = db.query(
+        func.avg(
+            (func.strftime('%s', models.Ticket.closed_at) - func.strftime('%s', models.Ticket.created_at)) / 3600.0
+        )
+    ).filter(
+        models.Ticket.closed_at.isnot(None),
+        models.Ticket.closed_at >= start
+    ).scalar()
+
+    # Optional: simple breakdown (still safe / aggregate)
+    by_status_rows = (
+        db.query(models.Ticket.status, func.count(models.Ticket.id))
+        .group_by(models.Ticket.status)
+        .all()
+    )
+    by_status = {status: count for status, count in by_status_rows}
+
+    return {
+        "active_tickets": active_tickets,
+        "avg_resolution_hours": float(avg_resolution_hours) if avg_resolution_hours is not None else None,
+        "window_days": days,
+        "by_status": by_status,
+        "last_updated": datetime.utcnow().isoformat()
+    }
+
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Machine Learning-Based IT Ticketing System API"}
