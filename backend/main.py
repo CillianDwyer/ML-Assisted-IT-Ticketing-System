@@ -1,10 +1,11 @@
 import uvicorn
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI, HTTPException, Depends, status, Body, Path
+from fastapi import FastAPI, HTTPException, Depends, status, Body, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 import models, database, schemas, auth
 from ml.ml_model import predict_category
@@ -201,6 +202,99 @@ def mark_all_notifications_read(
     return {"success": True}
 
 # ---------------------------
+# ✅ Admin Stats (NEW)
+# ---------------------------
+@app.get("/admin/stats")
+def admin_stats(
+    days: int = Query(14, ge=1, le=365),
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    total = db.query(models.Ticket).count()
+    open_count = db.query(models.Ticket).filter(models.Ticket.status == "Open").count()
+    inprog_count = db.query(models.Ticket).filter(models.Ticket.status == "In Progress").count()
+    closed_count = db.query(models.Ticket).filter(models.Ticket.status == "Closed").count()
+
+    assigned = db.query(models.Ticket).filter(models.Ticket.technician_id.isnot(None)).count()
+    unassigned = db.query(models.Ticket).filter(models.Ticket.technician_id.is_(None)).count()
+
+    # Avg resolution time (hours) for closed tickets (SQLite strftime trick)
+    avg_resolution_hours = db.query(
+        func.avg(
+            (func.strftime('%s', models.Ticket.closed_at) - func.strftime('%s', models.Ticket.created_at)) / 3600.0
+        )
+    ).filter(models.Ticket.closed_at.isnot(None)).scalar()
+
+    start = datetime.utcnow() - timedelta(days=days)
+
+    per_day_rows = (
+        db.query(
+            func.strftime('%Y-%m-%d', models.Ticket.created_at).label("day"),
+            func.count(models.Ticket.id).label("count")
+        )
+        .filter(models.Ticket.created_at >= start)
+        .group_by("day")
+        .order_by("day")
+        .all()
+    )
+    tickets_per_day = [{"day": r.day, "count": r.count} for r in per_day_rows]
+
+    status_rows = (
+        db.query(models.Ticket.status, func.count(models.Ticket.id))
+        .group_by(models.Ticket.status)
+        .all()
+    )
+    by_status = {status: count for status, count in status_rows}
+
+    category_rows = (
+        db.query(models.Ticket.category, func.count(models.Ticket.id))
+        .group_by(models.Ticket.category)
+        .all()
+    )
+    by_category = {cat: count for cat, count in category_rows}
+
+    tech_rows = (
+        db.query(models.User.email, func.count(models.Ticket.id))
+        .join(models.Ticket, models.Ticket.technician_id == models.User.id, isouter=True)
+        .filter(models.User.role == "technician")
+        .group_by(models.User.email)
+        .all()
+    )
+    by_technician = [{"technician": email, "count": count} for email, count in tech_rows]
+
+    oldest_open = (
+        db.query(models.Ticket)
+        .filter(models.Ticket.status != "Closed")
+        .order_by(models.Ticket.created_at.asc())
+        .limit(5)
+        .all()
+    )
+    oldest_open_simple = [
+        {"id": t.id, "title": t.title, "status": t.status, "created_at": t.created_at}
+        for t in oldest_open
+    ]
+
+    return {
+        "overview": {
+            "total": total,
+            "open": open_count,
+            "in_progress": inprog_count,
+            "closed": closed_count,
+            "assigned": assigned,
+            "unassigned": unassigned,
+            "avg_resolution_hours": float(avg_resolution_hours) if avg_resolution_hours is not None else None,
+        },
+        "tickets_per_day": tickets_per_day,
+        "by_status": by_status,
+        "by_category": by_category,
+        "by_technician": by_technician,
+        "oldest_open": oldest_open_simple,
+    }
+
+# ---------------------------
 # Tickets - Views
 # ---------------------------
 @app.get("/tickets/all", response_model=list[schemas.TicketResponse])
@@ -257,14 +351,11 @@ def get_ticket_by_id(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Role-based authorization
     if current_user.role == "user" and ticket.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-
     if current_user.role == "technician" and ticket.technician_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Populate emails
     ticket.user_email = db.query(models.User.email).filter(models.User.id == ticket.user_id).scalar()
     if ticket.technician_id:
         ticket.technician_email = db.query(models.User.email).filter(models.User.id == ticket.technician_id).scalar()
@@ -288,22 +379,20 @@ def create_ticket(
         .first()
     )
 
-    # ✅ Status should only be: Open, In Progress, Closed
-    # Assignment is represented by technician_id, not a separate "Assigned" status.
     db_ticket = models.Ticket(
         title=ticket.title,
         description=ticket.description,
         category=predicted_category,
         status="Open",
         user_id=current_user.id,
-        technician_id=technician.id if technician else None
+        technician_id=technician.id if technician else None,
+        updated_at=datetime.utcnow()
     )
 
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
 
-    # 🔔 Notify technician if auto-assigned
     if db_ticket.technician_id:
         create_notification(
             db,
@@ -336,15 +425,14 @@ def assign_ticket(
         raise HTTPException(status_code=404, detail="Technician not found")
 
     ticket.technician_id = technician_id
+    ticket.updated_at = datetime.utcnow()
 
-    # ✅ Do NOT set status="Assigned"
     if not ticket.status:
         ticket.status = "Open"
 
     db.commit()
     db.refresh(ticket)
 
-    # 🔔 Notify technician of assignment
     create_notification(
         db,
         user_id=technician_id,
@@ -368,22 +456,25 @@ def update_ticket_status(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Admin can update any; technician only their assigned
     if current_user.role == "technician" and ticket.technician_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not assigned to this ticket")
     if current_user.role not in ["technician", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # ✅ Enforce only these statuses
     allowed_statuses = {"Open", "In Progress", "Closed"}
     if status not in allowed_statuses:
         raise HTTPException(status_code=400, detail="Invalid status")
 
     ticket.status = status
+    ticket.updated_at = datetime.utcnow()
+    if status == "Closed":
+        ticket.closed_at = datetime.utcnow()
+    else:
+        ticket.closed_at = None
+
     db.commit()
     db.refresh(ticket)
 
-    # 🔔 Notify other participants (not the actor)
     recipients = set()
     if ticket.user_id and ticket.user_id != current_user.id:
         recipients.add(ticket.user_id)
@@ -415,7 +506,6 @@ def update_ticket_category(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Authorization
     if current_user.role == "technician" and ticket.technician_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not assigned to this ticket")
     if current_user.role not in ["technician", "admin"]:
@@ -431,6 +521,7 @@ def update_ticket_category(
 
     ticket.category = category
     ticket.technician_id = technician.id if technician else None
+    ticket.updated_at = datetime.utcnow()
 
     if not ticket.status:
         ticket.status = "Open"
@@ -438,7 +529,6 @@ def update_ticket_category(
     db.commit()
     db.refresh(ticket)
 
-    # 🔔 If rerouted to a different technician, notify the new assignee
     if ticket.technician_id and ticket.technician_id != previous_technician_id:
         create_notification(
             db,
@@ -510,7 +600,6 @@ def add_ticket_message(
     db.commit()
     db.refresh(new_message)
 
-    # 🔔 Notify other participants (not the sender)
     recipients = set()
     if ticket.user_id and ticket.user_id != current_user.id:
         recipients.add(ticket.user_id)

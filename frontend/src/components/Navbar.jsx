@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import api from "../api";
+import logo from "../assets/logo1.png";
 
 function Navbar() {
   const token = localStorage.getItem("token");
@@ -44,9 +45,7 @@ function Navbar() {
     try {
       const res = await api.get("/notifications/unread-count");
       setNotifCount(res.data?.count ?? 0);
-    } catch {
-      // silent (polling)
-    }
+    } catch {}
   };
 
   const fetchNotifications = async () => {
@@ -77,9 +76,7 @@ function Navbar() {
       if (!n.is_read) {
         await api.put(`/notifications/${n.id}/read`);
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     setNotifications((prev) =>
       prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
@@ -99,7 +96,7 @@ function Navbar() {
       return;
     }
 
-    fetchUnreadCount(); // initial
+    fetchUnreadCount();
     const id = setInterval(fetchUnreadCount, 15000);
     return () => clearInterval(id);
   }, [token]);
@@ -167,112 +164,124 @@ function Navbar() {
     <>
       <nav className="navbar">
         <div className="nav-inner">
-          {/* LEFT: Navigation links */}
-          <ul className="nav-list">
-            {token && (
-              <>
-                <li>
-                  <NavLink
-                    to="/"
-                    className={({ isActive }) =>
-                      isActive ? "nav-item active" : "nav-item"
-                    }
-                  >
-                    Submit Ticket
-                  </NavLink>
-                </li>
 
-                <li>
-                  <NavLink
-                    to="/mytickets"
-                    className={({ isActive }) =>
-                      isActive ? "nav-item active" : "nav-item"
-                    }
-                  >
-                    My Tickets
-                  </NavLink>
-                </li>
+          {/* LEFT SIDE: Logo + Navigation */}
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
 
-                {role === "admin" && (
+            {/* Logo */}
+            <img
+              src={logo}
+              alt="Logo"
+              className="nav-logo"
+              onClick={() => navigate("/")}
+            />
+
+            {/* Navigation links */}
+            <ul className="nav-list">
+              {token && (
+                <>
                   <li>
                     <NavLink
-                      to="/admin"
+                      to="/"
                       className={({ isActive }) =>
                         isActive ? "nav-item active" : "nav-item"
                       }
                     >
-                      Admin Dashboard
+                      Submit Ticket
                     </NavLink>
                   </li>
-                )}
 
-                {role === "technician" && (
                   <li>
                     <NavLink
-                      to="/tech"
+                      to="/mytickets"
                       className={({ isActive }) =>
                         isActive ? "nav-item active" : "nav-item"
                       }
                     >
-                      My Assignments
+                      My Tickets
                     </NavLink>
                   </li>
-                )}
-              </>
-            )}
 
-            <li>
-              <NavLink
-                to="/about"
-                className={({ isActive }) =>
-                  isActive ? "nav-item active" : "nav-item"
-                }
-              >
-                About
-              </NavLink>
-            </li>
+                  {role === "admin" && (
+                    <li>
+                      <NavLink
+                        to="/admin"
+                        className={({ isActive }) =>
+                          isActive ? "nav-item active" : "nav-item"
+                        }
+                      >
+                        Admin Dashboard
+                      </NavLink>
+                    </li>
+                  )}
 
-            {!token && (
-              <>
-                <li>
-                  <NavLink
-                    to="/login"
-                    className={({ isActive }) =>
-                      isActive ? "nav-item active" : "nav-item"
-                    }
-                  >
-                    Login
-                  </NavLink>
-                </li>
+                  {role === "technician" && (
+                    <li>
+                      <NavLink
+                        to="/tech"
+                        className={({ isActive }) =>
+                          isActive ? "nav-item active" : "nav-item"
+                        }
+                      >
+                        My Assignments
+                      </NavLink>
+                    </li>
+                  )}
+                </>
+              )}
 
-                <li>
-                  <NavLink
-                    to="/register"
-                    className={({ isActive }) =>
-                      isActive ? "nav-item active" : "nav-item"
-                    }
-                  >
-                    Register
-                  </NavLink>
-                </li>
-              </>
-            )}
-          </ul>
+              <li>
+                <NavLink
+                  to="/about"
+                  className={({ isActive }) =>
+                    isActive ? "nav-item active" : "nav-item"
+                  }
+                >
+                  About
+                </NavLink>
+              </li>
 
-          {/* RIGHT: Actions */}
+              {!token && (
+                <>
+                  <li>
+                    <NavLink
+                      to="/login"
+                      className={({ isActive }) =>
+                        isActive ? "nav-item active" : "nav-item"
+                      }
+                    >
+                      Login
+                    </NavLink>
+                  </li>
+
+                  <li>
+                    <NavLink
+                      to="/register"
+                      className={({ isActive }) =>
+                        isActive ? "nav-item active" : "nav-item"
+                      }
+                    >
+                      Register
+                    </NavLink>
+                  </li>
+                </>
+              )}
+            </ul>
+
+          </div>
+
+          {/* RIGHT SIDE: Actions */}
           <div className="nav-actions">
-            {/* 🔔 Notifications (only when logged in) */}
+
+            {/* Notifications */}
             {token && (
               <div className="notif-wrap" ref={notifRef}>
                 <button
                   className="notif-btn"
-                  title="Notifications"
                   onClick={() => {
                     setMenuOpen(false);
                     setNotifOpen((v) => !v);
                   }}
-                  aria-haspopup="menu"
-                  aria-expanded={notifOpen}
                 >
                   🔔
                   {notifCount > 0 && (
@@ -283,14 +292,13 @@ function Navbar() {
                 </button>
 
                 {notifOpen && (
-                  <div className="notif-dropdown" role="menu">
+                  <div className="notif-dropdown">
                     <div className="notif-header">
                       <span>Notifications</span>
                       <button
                         className="notif-clear"
                         onClick={markAllRead}
                         disabled={notifCount === 0}
-                        title="Mark all as read"
                       >
                         Mark all read
                       </button>
@@ -300,18 +308,23 @@ function Navbar() {
                       {notifLoading ? (
                         <div className="notif-empty">Loading…</div>
                       ) : notifications.length === 0 ? (
-                        <div className="notif-empty">No notifications yet.</div>
+                        <div className="notif-empty">
+                          No notifications yet.
+                        </div>
                       ) : (
                         notifications.map((n) => (
                           <button
                             key={n.id}
-                            className={`notif-item ${n.is_read ? "" : "unread"}`}
+                            className={`notif-item ${
+                              n.is_read ? "" : "unread"
+                            }`}
                             onClick={() => openNotification(n)}
-                            role="menuitem"
                           >
                             <div className="notif-text">{n.content}</div>
                             <div className="notif-time">
-                              {new Date(n.created_at).toLocaleString()}
+                              {new Date(
+                                n.created_at
+                              ).toLocaleString()}
                             </div>
                           </button>
                         ))
@@ -322,7 +335,7 @@ function Navbar() {
               </div>
             )}
 
-            {/* User menu (only when logged in) */}
+            {/* User menu */}
             {token && (
               <div className="user-menu" ref={menuRef}>
                 <button
@@ -331,9 +344,6 @@ function Navbar() {
                     setNotifOpen(false);
                     setMenuOpen((v) => !v);
                   }}
-                  aria-haspopup="menu"
-                  aria-expanded={menuOpen}
-                  title="Account menu"
                 >
                   <span className="user-email">{email}</span>
                   <span className="user-role">{roleLabel}</span>
@@ -341,61 +351,13 @@ function Navbar() {
                 </button>
 
                 {menuOpen && (
-                  <div className="user-dropdown" role="menu">
-                    <div className="user-dropdown-header">
-                      <div className="user-dropdown-email">{email}</div>
-                      <div className="user-dropdown-role">{roleLabel}</div>
-                    </div>
-
-                    <div className="user-dropdown-divider" />
-
-                    {/* Quick links */}
-                    <button
-                      className="user-dropdown-item"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigate("/mytickets");
-                      }}
-                      role="menuitem"
-                    >
-                      My Tickets
-                    </button>
-
-                    {role === "admin" && (
-                      <button
-                        className="user-dropdown-item"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigate("/admin");
-                        }}
-                        role="menuitem"
-                      >
-                        Admin Dashboard
-                      </button>
-                    )}
-
-                    {role === "technician" && (
-                      <button
-                        className="user-dropdown-item"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigate("/tech");
-                        }}
-                        role="menuitem"
-                      >
-                        My Assignments
-                      </button>
-                    )}
-
-                    <div className="user-dropdown-divider" />
-
+                  <div className="user-dropdown">
                     <button
                       className="user-dropdown-item danger"
                       onClick={() => {
                         setMenuOpen(false);
                         setShowConfirm(true);
                       }}
-                      role="menuitem"
                     >
                       Logout
                     </button>
@@ -404,19 +366,19 @@ function Navbar() {
               </div>
             )}
 
-            {/* 🌙 Theme toggle */}
+            {/* Theme toggle */}
             <button
               onClick={toggleDarkMode}
               className="theme-toggle"
-              title="Toggle dark mode"
             >
               {darkMode ? "☀️" : "🌙"}
             </button>
+
           </div>
         </div>
       </nav>
 
-      {/* 🔐 Logout Confirmation */}
+      {/* Logout Confirmation */}
       {showConfirm && (
         <div className="logout-overlay">
           <div className="logout-popup">
@@ -425,7 +387,10 @@ function Navbar() {
               <button className="yes-btn" onClick={handleLogout}>
                 Yes
               </button>
-              <button className="no-btn" onClick={() => setShowConfirm(false)}>
+              <button
+                className="no-btn"
+                onClick={() => setShowConfirm(false)}
+              >
                 No
               </button>
             </div>

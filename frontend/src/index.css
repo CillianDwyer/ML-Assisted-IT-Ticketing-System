@@ -13,15 +13,13 @@ body {
 
 body {
   margin: 0;
-  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial,
-    sans-serif;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 
-  /*  Dark-mode friendly (uses CSS variables) */
+  /* Dark-mode friendly (uses CSS variables) */
   background: var(--bg);
   color: var(--text);
 
-  transition: background-color 0.25s ease, color 0.25s ease,
-    background 0.25s ease;
+  transition: background-color 0.25s ease, color 0.25s ease, background 0.25s ease;
 }
 
 a {

@@ -16,7 +16,7 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String, default="user")
 
-    # NEW: technician speciality
+    # technician speciality
     speciality = Column(String, nullable=True)
 
     # Distinguish between tickets created and assigned
@@ -31,7 +31,7 @@ class User(Base):
         foreign_keys="Ticket.technician_id"
     )
 
-    # NEW: notifications for this user
+    # notifications for this user
     notifications = relationship(
         "Notification",
         back_populates="user"
@@ -50,6 +50,11 @@ class Ticket(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     technician_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
+    # ✅ NEW timestamps (for analytics)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    closed_at = Column(DateTime, nullable=True)
+
     # Clearly define relationships
     owner = relationship(
         "User",
@@ -62,7 +67,6 @@ class Ticket(Base):
         foreign_keys=[technician_id]
     )
 
-    # NEW: notifications related to this ticket (optional, but useful)
     notifications = relationship(
         "Notification",
         back_populates="ticket"
@@ -88,16 +92,13 @@ class Notification(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Who receives the notification
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
 
     # "message", "assignment", "status"
     type = Column(String, nullable=False)
 
-    # Optional link to a ticket
     ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=True, index=True)
 
-    # Short text shown in the UI
     content = Column(String, nullable=False)
 
     is_read = Column(Boolean, default=False, nullable=False)

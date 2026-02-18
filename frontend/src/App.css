@@ -4,25 +4,36 @@
    THEME VARIABLES
 ========================= */
 :root {
-  /* Light mode */
-  --bg: linear-gradient(to bottom right, #f0f9ff, #e0f2fe);
-  --card: rgba(255, 255, 255, 0.95);
-  --text: #0f172a;
-  --muted: #475569;
+  /* Light mode — “dimmed premium” (more depth, less glare) */
 
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
+  /* Background: darker edges + subtle color so it doesn't feel like a blank page */
+  --bg: radial-gradient(circle at top, #eef2f7 0%, #e3eaf4 45%, #d7e1ee 100%);
+
+  /* Surfaces: slightly tinted instead of stark white */
+  --card: rgba(248, 250, 252, 0.92);
+
+  /* Text: strong but not harsh navy */
+  --text: #0b1220;
+  --muted: #516174;
+
+  /* Brand */
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+
+  /* Navbar: a little deeper so it matches the "premium" feel */
   --nav: #1e3a8a;
 
-  --border: #e5e7eb;
-  --input-bg: #ffffff;
-  --input-text: #0f172a;
+  /* Borders + focus ring: clearer separation */
+  --border: rgba(2, 6, 23, 0.14);
+  --input-bg: rgba(248, 250, 252, 0.96);
+  --input-text: #0b1220;
   --placeholder: #64748b;
 
-  --ring: rgba(59, 130, 246, 0.35);
+  --ring: rgba(37, 99, 235, 0.25);
 
-  --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.08);
+  /* Shadows: stronger than your current light mode so cards lift like dark mode */
+  --shadow-sm: 0 8px 18px rgba(2, 6, 23, 0.08);
+  --shadow-md: 0 28px 70px rgba(2, 6, 23, 0.14);
 }
 
 /* 🌙 Dark mode */
@@ -51,10 +62,17 @@
    NAVBAR
 ========================= */
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
   width: 100%;
   background-color: var(--nav);
   padding: 1rem 1.5rem;
+  backdrop-filter: blur(10px);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
 }
 
 .nav-inner {
@@ -65,6 +83,15 @@
   align-items: center;
   justify-content: space-between;
 }
+
+.nav-logo {
+  height: 60px;
+  width: auto;
+  cursor: pointer;
+  border-radius: 0px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
 
 /* LEFT nav links */
 .nav-list {
@@ -249,6 +276,7 @@ select:focus {
   display: flex;
   gap: 0.75rem;
   margin: 1rem 0;
+  flex-wrap: wrap; /* ✅ allows wrapping on mobile */
 }
 
 .filter-btn {
@@ -258,6 +286,11 @@ select:focus {
   background: var(--card);
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.filter-btn:hover {
+  transform: translateY(-1px);
 }
 
 .filter-btn.active {
@@ -266,6 +299,10 @@ select:focus {
   border-color: var(--primary);
 }
 
+.dark .filter-btn {
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--text);
+}
 
 /* =========================
    TICKET LIST (MyTickets / TechDashboard)
@@ -306,8 +343,7 @@ select:focus {
 /* Clickable hover */
 .clickable {
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease,
-    background-color 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .clickable:hover {
@@ -318,60 +354,6 @@ select:focus {
 
 .dark .clickable:hover {
   background-color: rgba(96, 165, 250, 0.08);
-}
-
-/* =========================
-   ADMIN TABLE
-========================= */
-.ticket-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1.25rem;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-.ticket-table th,
-.ticket-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: middle;
-}
-
-.ticket-table th {
-  background-color: rgba(224, 231, 255, 0.9);
-  color: #1e3a8a;
-  font-weight: 900;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  letter-spacing: 0.04em;
-}
-
-.dark .ticket-table th {
-  background-color: rgba(96, 165, 250, 0.14);
-  color: #cbd5e1;
-}
-
-.ticket-table tr:hover {
-  background-color: rgba(241, 245, 255, 0.8);
-}
-
-.dark .ticket-table tr:hover {
-  background-color: rgba(96, 165, 250, 0.07);
-}
-
-.ticket-table td {
-  font-size: 0.92rem;
-}
-
-/* dropdowns in table */
-.ticket-table select {
-  width: 100%;
-  min-width: 140px;
 }
 
 /* =========================
@@ -562,16 +544,6 @@ select:focus {
   transform: translateY(-1px);
 }
 
-.filter-btn:hover {
-  transform: translateY(-1px);
-}
-
-.dark .filter-btn {
-  background: rgba(15, 23, 42, 0.6);
-  color: var(--text);
-}
-
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -584,10 +556,10 @@ select:focus {
 }
 
 /* =========================
-   APP LAYOUT SHELL (NEW)
+   APP LAYOUT SHELL
 ========================= */
 .app-shell {
-  min-height: calc(100vh - 72px); /* navbar height buffer (tweak if needed) */
+  min-height: calc(100vh - 72px);
   padding: 2rem 1.5rem;
   max-width: 1100px;
   margin: 0 auto;
@@ -604,31 +576,6 @@ select:focus {
     margin: 1.25rem auto;
   }
 }
-
-/* =========================
-   FILTERS (IMPROVED)
-========================= */
-.ticket-filters {
-  flex-wrap: wrap; /* ✅ allows wrapping on mobile */
-}
-
-/* =========================
-   ADMIN TABLE RESPONSIVE WRAP (NEW)
-========================= */
-.table-wrap {
-  overflow-x: auto;
-  border-radius: 14px;
-}
-
-/* Optional: slightly nicer table on very small screens */
-@media (max-width: 640px) {
-  .ticket-table th,
-  .ticket-table td {
-    padding: 0.7rem 0.75rem;
-    font-size: 0.9rem;
-  }
-}
-
 
 /* =========================
    FOOTER
@@ -927,12 +874,75 @@ select:focus {
   }
 }
 
+/* =========================
+   DASHBOARD (AdminDashboard)
+========================= */
+
 /* Make dashboard slightly wider if you want */
 .dashboard-card {
-  max-width: 1050px; /* optional */
+  max-width: 1050px;
 }
 
-/* Use wrapper as the table container (clipped & scrollable) */
+.chart-wrap {
+  height: 260px; /* makes charts readable + consistent */
+}
+
+/* KPIs */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.kpi-card {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+}
+
+/* Charts */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.chart-card {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-card h3 {
+  margin: 6px 0 10px;
+  color: var(--text);
+}
+
+/* Optional: make Chart.js canvas not look “washed” */
+.chart-card canvas {
+  display: block;
+}
+
+.oldest-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+/* =========================
+   ADMIN TABLE (AdminDashboard)
+========================= */
+
+/* Wrapper handles border/shadow/radius + scrolling */
 .table-wrap {
   overflow-x: auto;
   border-radius: 14px;
@@ -941,16 +951,54 @@ select:focus {
   background: var(--card);
 }
 
-/* Remove radius/shadow from the table itself (wrapper handles it) */
+/* Table is "flat" because wrapper handles decoration */
 .ticket-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 0;         /* important so it doesn't "float" */
-  border: none;          /* wrapper has border */
-  border-radius: 0;      /* wrapper has radius */
-  box-shadow: none;      /* wrapper has shadow */
+  margin-top: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   overflow: visible;
   background: transparent;
+}
+
+.ticket-table th,
+.ticket-table td {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.92rem;
+}
+
+.ticket-table th {
+  background-color: rgba(224, 231, 255, 0.9);
+  color: #1e3a8a;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.dark .ticket-table th {
+  background-color: rgba(96, 165, 250, 0.14);
+  color: #cbd5e1;
+}
+
+.ticket-table tr:hover {
+  background-color: rgba(241, 245, 255, 0.8);
+}
+
+.dark .ticket-table tr:hover {
+  background-color: rgba(96, 165, 250, 0.07);
+}
+
+/* Sticky header */
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 /* Make columns behave */
@@ -960,13 +1008,24 @@ select:focus {
 
 /* Set reasonable widths */
 .admin-table th:nth-child(1),
-.admin-table td:nth-child(1) { width: 60px; }   /* ID */
+.admin-table td:nth-child(1) {
+  width: 60px;
+} /* ID */
+
 .admin-table th:nth-child(5),
-.admin-table td:nth-child(5) { width: 120px; }  /* Status */
+.admin-table td:nth-child(5) {
+  width: 120px;
+} /* Status */
+
 .admin-table th:nth-child(6),
-.admin-table td:nth-child(6) { width: 180px; }  /* Category */
+.admin-table td:nth-child(6) {
+  width: 180px;
+} /* Category */
+
 .admin-table th:nth-child(7),
-.admin-table td:nth-child(7) { width: 180px; }  /* Assign */
+.admin-table td:nth-child(7) {
+  width: 180px;
+} /* Assign */
 
 /* Keep long text tidy */
 .cell-email,
@@ -980,19 +1039,6 @@ select:focus {
   font-weight: 800;
 }
 
-/* Optional: tighten row height slightly */
-.ticket-table th,
-.ticket-table td {
-  padding: 0.75rem 0.9rem;
-}
-
-/* Sticky header feels “real app” */
-.table-wrap thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
 /* Make selects smaller in table */
 .ticket-table select {
   min-width: 0;
@@ -1001,6 +1047,14 @@ select:focus {
   border-radius: 10px;
 }
 
+/* Optional: slightly nicer table on very small screens */
+@media (max-width: 640px) {
+  .ticket-table th,
+  .ticket-table td {
+    padding: 0.7rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}
 
 /* =========================
    ABOUT PAGE POLISH
@@ -1185,4 +1239,3 @@ select:focus {
   padding: 1rem;
   color: var(--muted);
 }
-

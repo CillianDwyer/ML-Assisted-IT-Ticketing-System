@@ -2,18 +2,16 @@
 # Defines what data the API accepts and returns using Pydantic
 
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 
-# Required data when registering a user
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    role: Optional[str] = "user"  # allow creating admins/techs manually
+    role: Optional[str] = "user"
 
 
-# Data returned to frontend for any user
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
@@ -23,7 +21,6 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-# Shared fields for tickets
 class TicketBase(BaseModel):
     title: str
     description: str
@@ -31,12 +28,10 @@ class TicketBase(BaseModel):
     status: Optional[str] = "Open"
 
 
-# Data needed to submit a ticket
 class TicketCreate(TicketBase):
     pass
 
 
-# What API returns when sending ticket data
 class TicketResponse(BaseModel):
     id: int
     title: str
@@ -47,6 +42,11 @@ class TicketResponse(BaseModel):
     technician_id: Optional[int] = None
     user_email: Optional[str] = None
     technician_email: Optional[str] = None
+
+    # ✅ NEW timestamps
+    created_at: datetime
+    updated_at: datetime
+    closed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -67,9 +67,6 @@ class MessageResponse(BaseModel):
         from_attributes = True
 
 
-# ---------------------------
-# Notifications
-# ---------------------------
 class NotificationResponse(BaseModel):
     id: int
     type: str

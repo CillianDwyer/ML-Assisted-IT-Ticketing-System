@@ -6,7 +6,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer"; // ✅ NEW
 import TicketForm from "./components/TicketForm";
-import MyTickets from "./components/MyTickets"; // ✅ fixed casing
+import MyTickets from "./components/Mytickets"; // ✅ fixed casing
 import About from "./components/About";
 import Login from "./components/Login";
 import Register from "./components/Register";
