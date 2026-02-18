@@ -37,7 +37,8 @@
 }
 
 /* 🌙 Dark mode */
-.dark {
+/* 🌙 Dark mode */
+body.dark {
   --bg: radial-gradient(circle at top, #0b1220 0%, #020617 55%, #000 100%);
   --card: #0b1220;
   --text: #e5e7eb;

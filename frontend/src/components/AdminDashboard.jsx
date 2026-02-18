@@ -30,9 +30,17 @@ ChartJS.register(
 // Categories supported by ML + system
 const CATEGORIES = ["Hardware", "Software", "Network", "Password Reset", "Access"];
 
-// read CSS variables (works for light/dark because you swap vars)
+function getThemeElement() {
+  // if body has .dark, read vars from body, otherwise root
+  return document.body.classList.contains("dark")
+    ? document.body
+    : document.documentElement;
+}
+
 function getCssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return getComputedStyle(getThemeElement())
+    .getPropertyValue(name)
+    .trim();
 }
 
 function AdminDashboard() {
@@ -74,11 +82,16 @@ function AdminDashboard() {
 
   // Observe theme toggle (adds/removes .dark on <html>)
   useEffect(() => {
-    const el = document.documentElement;
-    const observer = new MutationObserver(() => setThemeTick((x) => x + 1));
-    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
+  const el = document.body; // observe body instead of html
+  const observer = new MutationObserver(() => setThemeTick((x) => x + 1));
+
+  observer.observe(el, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+
+  return () => observer.disconnect();
+}, []);
 
   // Assign technician
   const assignTicket = useCallback(
@@ -126,9 +139,13 @@ function AdminDashboard() {
     const card = getCssVar("--card") || "#0b1220";
     const primary = getCssVar("--primary") || "#3b82f6";
 
-    const isDark = document.documentElement.classList.contains("dark");
+    const isDark = document.body.classList.contains("dark");
     // outlines: white in dark mode, dark-ish in light mode
     const outline = isDark ? "#ffffff" : "#0f172a";
+
+    
+    
+    
 
     return { text, muted, border, card, primary, outline, isDark };
   }, [themeTick]);
