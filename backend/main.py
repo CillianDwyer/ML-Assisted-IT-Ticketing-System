@@ -1,10 +1,13 @@
 import uvicorn
 from datetime import datetime, timedelta
+import os
 import re
+import uuid
 
-from fastapi import FastAPI, HTTPException, Depends, status, Body, Path, Query
+from fastapi import FastAPI, HTTPException, Depends, status, Body, Path, Query, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text, or_
 
@@ -28,7 +31,12 @@ app.add_middleware(
 
 models.Base.metadata.create_all(bind=database.engine)
 
-def ensure_ticket_message_private_columns():
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+
+
+def ensure_ticket_message_columns():
     db = database.SessionLocal()
     try:
         cols = db.execute(text("PRAGMA table_info(ticket_messages)")).fetchall()
@@ -50,11 +58,43 @@ def ensure_ticket_message_private_columns():
                 )
             )
 
+        if "attachment_name" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE ticket_messages "
+                    "ADD COLUMN attachment_name VARCHAR"
+                )
+            )
+
+        if "attachment_path" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE ticket_messages "
+                    "ADD COLUMN attachment_path VARCHAR"
+                )
+            )
+
+        if "attachment_type" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE ticket_messages "
+                    "ADD COLUMN attachment_type VARCHAR"
+                )
+            )
+
+        if "attachment_size" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE ticket_messages "
+                    "ADD COLUMN attachment_size INTEGER"
+                )
+            )
+
         db.commit()
     finally:
         db.close()
 
-ensure_ticket_message_private_columns()
+ensure_ticket_message_columns()
 
 # ---------------------------
 # DB Dependency
@@ -144,6 +184,21 @@ def extract_mentioned_email(text_content: str) -> str | None:
     if not match:
         return None
     return match.group(1).lower()
+
+
+def save_message_attachment(ticket_id: int, file: UploadFile) -> tuple[str, str, str | None, int]:
+    safe_name = os.path.basename(file.filename or "attachment")
+    ext = os.path.splitext(safe_name)[1]
+    stored_name = f"{ticket_id}_{uuid.uuid4().hex}{ext}"
+    dest_path = os.path.join(UPLOAD_DIR, stored_name)
+
+    content = file.file.read()
+    if len(content) > MAX_ATTACHMENT_BYTES:
+        raise HTTPException(status_code=400, detail="Attachment exceeds 10MB limit")
+    with open(dest_path, "wb") as out:
+        out.write(content)
+
+    return safe_name, dest_path, file.content_type, len(content)
 
 # ---------------------------
 # Auth
@@ -663,7 +718,10 @@ def get_ticket_messages(
             "sender_email": msg.sender.email,
             "created_at": msg.created_at,
             "is_private": bool(msg.is_private),
-            "recipient_email": msg.recipient.email if msg.recipient else None
+            "recipient_email": msg.recipient.email if msg.recipient else None,
+            "attachment_name": msg.attachment_name,
+            "attachment_type": msg.attachment_type,
+            "attachment_size": msg.attachment_size
         }
         for msg in messages
     ]
@@ -682,7 +740,11 @@ def add_ticket_message(
     if not can_access_ticket(ticket, current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    mentioned_email = extract_mentioned_email(message.content)
+    text_content = (message.content or "").strip()
+    if not text_content:
+        raise HTTPException(status_code=400, detail="Message content is required")
+
+    mentioned_email = extract_mentioned_email(text_content)
     target_email = (message.private_to_email.lower() if message.private_to_email else None) or mentioned_email
 
     recipient = None
@@ -708,12 +770,16 @@ def add_ticket_message(
         is_private = True
 
     new_message = models.TicketMessage(
-        content=message.content,
+        content=text_content,
         sender_id=current_user.id,
         ticket_id=ticket_id,
         created_at=datetime.utcnow().isoformat(),
         is_private=is_private,
-        recipient_id=recipient.id if recipient else None
+        recipient_id=recipient.id if recipient else None,
+        attachment_name=None,
+        attachment_path=None,
+        attachment_type=None,
+        attachment_size=None
     )
 
     db.add(new_message)
@@ -754,8 +820,148 @@ def add_ticket_message(
         "sender_email": current_user.email,
         "created_at": new_message.created_at,
         "is_private": bool(new_message.is_private),
-        "recipient_email": recipient.email if recipient else None
+        "recipient_email": recipient.email if recipient else None,
+        "attachment_name": new_message.attachment_name,
+        "attachment_type": new_message.attachment_type,
+        "attachment_size": new_message.attachment_size
     }
+
+
+@app.post("/tickets/{ticket_id}/messages/upload", response_model=schemas.MessageResponse)
+def add_ticket_message_with_attachment(
+    ticket_id: int,
+    content: str | None = Form(None),
+    private_to_email: str | None = Form(None),
+    attachment: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if not can_access_ticket(ticket, current_user):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    text_content = (content or "").strip()
+    if not text_content and attachment is None:
+        raise HTTPException(status_code=400, detail="Message must include text or attachment")
+
+    target_email = (private_to_email.lower().strip() if private_to_email else None) or extract_mentioned_email(text_content)
+    recipient = None
+    is_private = False
+
+    if target_email:
+        if current_user.role not in ["technician", "admin"]:
+            raise HTTPException(status_code=403, detail="Only technicians/admins can send private assistance messages")
+        recipient = (
+            db.query(models.User)
+            .filter(
+                models.User.email == target_email,
+                models.User.role.in_(["technician", "admin"])
+            )
+            .first()
+        )
+        if not recipient:
+            raise HTTPException(status_code=404, detail="Private recipient must be an existing technician/admin email")
+        if recipient.id == current_user.id:
+            raise HTTPException(status_code=400, detail="Cannot send private message to yourself")
+        is_private = True
+
+    attachment_name = None
+    attachment_path = None
+    attachment_type = None
+    attachment_size = None
+    if attachment is not None:
+        attachment_name, attachment_path, attachment_type, attachment_size = save_message_attachment(ticket_id, attachment)
+
+    new_message = models.TicketMessage(
+        content=text_content,
+        sender_id=current_user.id,
+        ticket_id=ticket_id,
+        created_at=datetime.utcnow().isoformat(),
+        is_private=is_private,
+        recipient_id=recipient.id if recipient else None,
+        attachment_name=attachment_name,
+        attachment_path=attachment_path,
+        attachment_type=attachment_type,
+        attachment_size=attachment_size
+    )
+
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+
+    if is_private and recipient and recipient.id != current_user.id:
+        create_notification(
+            db,
+            user_id=recipient.id,
+            type="message",
+            content=f"Private assist message on ticket #{ticket.id}: {ticket.title}",
+            ticket_id=ticket.id
+        )
+        db.commit()
+    else:
+        recipients = set()
+        if ticket.user_id and ticket.user_id != current_user.id:
+            recipients.add(ticket.user_id)
+        if ticket.technician_id and ticket.technician_id != current_user.id:
+            recipients.add(ticket.technician_id)
+        for uid in recipients:
+            create_notification(
+                db,
+                user_id=uid,
+                type="message",
+                content=f"New message on ticket #{ticket.id}: {ticket.title}",
+                ticket_id=ticket.id
+            )
+        if recipients:
+            db.commit()
+
+    return {
+        "id": new_message.id,
+        "content": new_message.content,
+        "sender_id": new_message.sender_id,
+        "sender_email": current_user.email,
+        "created_at": new_message.created_at,
+        "is_private": bool(new_message.is_private),
+        "recipient_email": recipient.email if recipient else None,
+        "attachment_name": new_message.attachment_name,
+        "attachment_type": new_message.attachment_type,
+        "attachment_size": new_message.attachment_size
+    }
+
+
+@app.get("/tickets/{ticket_id}/messages/{message_id}/attachment")
+def download_message_attachment(
+    ticket_id: int,
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if not can_access_ticket(ticket, current_user):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    message = (
+        db.query(models.TicketMessage)
+        .filter(
+            models.TicketMessage.id == message_id,
+            models.TicketMessage.ticket_id == ticket_id
+        )
+        .first()
+    )
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if not message.attachment_path or not os.path.exists(message.attachment_path):
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    return FileResponse(
+        path=message.attachment_path,
+        filename=message.attachment_name or "attachment",
+        media_type=message.attachment_type or "application/octet-stream"
+    )
 
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):

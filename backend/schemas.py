@@ -53,7 +53,7 @@ class TicketResponse(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    content: str
+    content: Optional[str] = None
     private_to_email: Optional[EmailStr] = None
 
 
@@ -65,6 +65,9 @@ class MessageResponse(BaseModel):
     created_at: str
     is_private: bool
     recipient_email: Optional[str] = None
+    attachment_name: Optional[str] = None
+    attachment_type: Optional[str] = None
+    attachment_size: Optional[int] = None
 
     class Config:
         from_attributes = True

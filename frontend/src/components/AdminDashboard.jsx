@@ -37,6 +37,7 @@ ChartJS.register(
 
 const CATEGORIES = ["Hardware", "Software", "Network", "Password Reset", "Access"];
 const STATUSES = ["Open", "In Progress", "Closed"];
+const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 
 function getThemeElement() {
   return document.body.classList.contains("dark")
@@ -62,6 +63,7 @@ function AdminDashboard() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
   const [sortOrder, setSortOrder] = useState("Newest"); // Newest | Oldest
 
   // Re-render charts when theme changes
@@ -326,14 +328,19 @@ function AdminDashboard() {
       );
     }
 
+    if (priorityFilter !== "All") {
+      list = list.filter((t) => derivePriority(t) === priorityFilter);
+    }
+
     list.sort((a, b) => (sortOrder === "Newest" ? b.id - a.id : a.id - b.id));
     return list;
-  }, [tickets, q, statusFilter, categoryFilter, sortOrder]);
+  }, [tickets, q, statusFilter, categoryFilter, priorityFilter, sortOrder]);
 
   const clearFilters = () => {
     setQ("");
     setStatusFilter("All");
     setCategoryFilter("All");
+    setPriorityFilter("All");
     setSortOrder("Newest");
   };
 
@@ -369,7 +376,7 @@ function AdminDashboard() {
         style={{
           marginTop: 14,
           display: "grid",
-          gridTemplateColumns: "1.4fr repeat(3, minmax(150px, 1fr))",
+          gridTemplateColumns: "1.4fr repeat(4, minmax(150px, 1fr))",
           gap: 10,
         }}
       >
@@ -402,6 +409,19 @@ function AdminDashboard() {
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {c}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="ticket-input"
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+        >
+          <option value="All">All priorities</option>
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              {p}
             </option>
           ))}
         </select>

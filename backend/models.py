@@ -80,6 +80,10 @@ class TicketMessage(Base):
     content = Column(String, nullable=False)
     created_at = Column(String)
     is_private = Column(Boolean, default=False, nullable=False)
+    attachment_name = Column(String, nullable=True)
+    attachment_path = Column(String, nullable=True)
+    attachment_type = Column(String, nullable=True)
+    attachment_size = Column(Integer, nullable=True)
 
     ticket_id = Column(Integer, ForeignKey("tickets.id"))
     sender_id = Column(Integer, ForeignKey("users.id"))

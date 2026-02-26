@@ -5,4 +5,7 @@ pydantic
 pydantic-settings
 python-multipart
 passlib[bcrypt]
-python-jose
+python-jose[cryptography]
+email-validator
+joblib
+scikit-learn
