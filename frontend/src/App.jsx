@@ -4,9 +4,9 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import Footer from "./components/Footer"; // ✅ NEW
+import Footer from "./components/Footer"; 
 import TicketForm from "./components/TicketForm";
-import MyTickets from "./components/Mytickets"; // ✅ fixed casing
+import MyTickets from "./components/Mytickets"; 
 import About from "./components/About";
 import Login from "./components/Login";
 import Register from "./components/Register";
