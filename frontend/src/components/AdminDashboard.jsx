@@ -1,6 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import PageHeader from "./PageHeader";
+import {
+  derivePriority,
+  getSlaState,
+  priorityClass,
+  slaClass,
+} from "../utils/ticketVisuals";
 
 import {
   Chart as ChartJS,
@@ -333,11 +340,15 @@ function AdminDashboard() {
   // Make entire row clickable, but keep dropdowns functional
   const openTicket = (ticketId) => navigate(`/tickets/${ticketId}`);
   const stopRowClick = (e) => e.stopPropagation();
+  const criticalCount = tickets.filter((t) => derivePriority(t) === "Critical").length;
+  const slaBreachedCount = tickets.filter((t) => getSlaState(t).level === "breach").length;
 
   return (
     <div className="ticket-card dashboard-card">
-      <h2>Admin Dashboard</h2>
-      <p>View and manage all tickets + analytics.</p>
+      <PageHeader
+        title="Admin Operations"
+        subtitle="Manage tickets, monitor queue health, and review performance analytics."
+      />
 
       {error && (
         <div
@@ -441,6 +452,8 @@ function AdminDashboard() {
                 <th>Title</th>
                 <th>User</th>
                 <th>Technician</th>
+                <th>Priority</th>
+                <th>SLA</th>
                 <th>Status</th>
                 <th>Category</th>
               </tr>
@@ -464,6 +477,18 @@ function AdminDashboard() {
 
                   <td className="cell-email" title={t.technician_email || ""}>
                     {t.technician_email || "Unassigned"}
+                  </td>
+
+                  <td>
+                    <span className={priorityClass(derivePriority(t))}>
+                      {derivePriority(t)}
+                    </span>
+                  </td>
+
+                  <td>
+                    <span className={slaClass(getSlaState(t).level)}>
+                      {getSlaState(t).label}
+                    </span>
                   </td>
 
                   {/* Stop click from bubbling when using dropdowns */}
@@ -514,6 +539,8 @@ function AdminDashboard() {
                 In Progress: {stats.overview.in_progress}
               </div>
               <div className="kpi-card">Closed: {stats.overview.closed}</div>
+              <div className="kpi-card">Critical: {criticalCount}</div>
+              <div className="kpi-card">SLA Breached: {slaBreachedCount}</div>
               <div className="kpi-card">
                 Avg Resolution:{" "}
                 {stats.overview.avg_resolution_hours != null

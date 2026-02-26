@@ -187,6 +187,17 @@ function Navbar() {
                         isActive ? "nav-item active" : "nav-item"
                       }
                     >
+                      Overview
+                    </NavLink>
+                  </li>
+
+                  <li>
+                    <NavLink
+                      to="/tickets/new"
+                      className={({ isActive }) =>
+                        isActive ? "nav-item active" : "nav-item"
+                      }
+                    >
                       Submit Ticket
                     </NavLink>
                   </li>

@@ -79,12 +79,15 @@ class TicketMessage(Base):
     id = Column(Integer, primary_key=True)
     content = Column(String, nullable=False)
     created_at = Column(String)
+    is_private = Column(Boolean, default=False, nullable=False)
 
     ticket_id = Column(Integer, ForeignKey("tickets.id"))
     sender_id = Column(Integer, ForeignKey("users.id"))
+    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     ticket = relationship("Ticket")
-    sender = relationship("User")
+    sender = relationship("User", foreign_keys=[sender_id])
+    recipient = relationship("User", foreign_keys=[recipient_id])
 
 
 class Notification(Base):

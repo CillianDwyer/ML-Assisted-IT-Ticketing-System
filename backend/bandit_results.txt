@@ -1,0 +1,54 @@
+Run started:2026-02-22 19:27:23.406076+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'supersecretkey'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b105_hardcoded_password_string.html
+   Location: .\auth.py:14:13
+13	# In production, store this securely (e.g. .env)
+14	SECRET_KEY = "supersecretkey"
+15	ALGORITHM = "HS256"
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'bearer'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b105_hardcoded_password_string.html
+   Location: .\main.py:126:8
+125	        "access_token": access_token,
+126	        "token_type": "bearer",
+127	        "user": {"id": user.id, "email": user.email, "role": user.role}
+128	    }
+129	
+130	# ---------------------------
+131	# Notifications
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\main.py:683:26
+682	if __name__ == "__main__":
+683	    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 732
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 2
+		Medium: 1
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 3
+		High: 0
+Files skipped (0):

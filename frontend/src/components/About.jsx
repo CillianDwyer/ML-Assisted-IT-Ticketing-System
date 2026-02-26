@@ -226,6 +226,19 @@ function About() {
         </ul>
       </div>
 
+      {/* FAQ QUICK LINKS */}
+      <div className="home-section">
+        <h3>Quick Answers</h3>
+        <div className="faq-links">
+          <a href="#faq-access" className="faq-link-chip">Account Access</a>
+          <a href="#faq-routing" className="faq-link-chip">Auto Assignment</a>
+          <a href="#faq-private" className="faq-link-chip">Private Assist Chat</a>
+          <a href="#faq-sla" className="faq-link-chip">Response Time</a>
+          <a href="#faq-data" className="faq-link-chip">Data Visibility</a>
+          <a href="#faq-status" className="faq-link-chip">System Status</a>
+        </div>
+      </div>
+
       {/* HOW IT WORKS */}
       <div className="home-section">
         <h3>How it works</h3>
@@ -246,6 +259,59 @@ SQLite Database         ML Classifier
         <p className="muted">
           Some information on this page is intentionally limited when you’re not signed in.
         </p>
+      </div>
+
+      {/* FAQ */}
+      <div className="home-section faq-section">
+        <h3>Frequently Asked Questions</h3>
+
+        <div id="faq-access" className="faq-item">
+          <h4>Who can create an account?</h4>
+          <p>
+            Internal users can register for a standard user account. Technician and admin accounts
+            are managed separately for support operations.
+          </p>
+        </div>
+
+        <div id="faq-routing" className="faq-item">
+          <h4>How are tickets assigned?</h4>
+          <p>
+            The system predicts a category from your description, then routes tickets to a matching
+            technician speciality when available.
+          </p>
+        </div>
+
+        <div id="faq-private" className="faq-item">
+          <h4>What is private assist messaging?</h4>
+          <p>
+            Technicians and admins can send private assistance messages inside a ticket thread to
+            collaborate without exposing internal notes to the ticket requester.
+          </p>
+        </div>
+
+        <div id="faq-sla" className="faq-item">
+          <h4>How is response urgency shown?</h4>
+          <p>
+            Queue views highlight derived priority and SLA state (On Track, At Risk, Breached) to
+            help teams triage work faster.
+          </p>
+        </div>
+
+        <div id="faq-data" className="faq-item">
+          <h4>Who can see my ticket details?</h4>
+          <p>
+            Standard users can access their own tickets. Assigned technicians and admins can access
+            tickets relevant to their role permissions.
+          </p>
+        </div>
+
+        <div id="faq-status" className="faq-item">
+          <h4>Where can I check platform health?</h4>
+          <p>
+            This page shows live service and metrics snapshots when available, including active ticket
+            volume and average resolution indicators.
+          </p>
+        </div>
       </div>
     </div>
   );

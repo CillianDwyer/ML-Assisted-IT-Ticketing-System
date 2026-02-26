@@ -13,11 +13,21 @@ import Register from "./components/Register";
 import AdminDashboard from "./components/AdminDashboard";
 import TechDashboard from "./components/TechDashboard";
 import TicketDetails from "./components/TicketDetails";
+import Overview from "./components/Overview";
 import "./App.css";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/login" />;
+}
+
+function RoleRoute({ allowedRoles, children }) {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  if (!token) return <Navigate to="/login" />;
+  if (!allowedRoles.includes(role)) return <Navigate to="/" />;
+  return children;
 }
 
 function App() {
@@ -30,6 +40,15 @@ function App() {
         <Routes>
           <Route
             path="/"
+            element={
+              <PrivateRoute>
+                <Overview />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/tickets/new"
             element={
               <PrivateRoute>
                 <TicketForm />
@@ -53,18 +72,18 @@ function App() {
           <Route
             path="/admin"
             element={
-              <PrivateRoute>
+              <RoleRoute allowedRoles={["admin"]}>
                 <AdminDashboard />
-              </PrivateRoute>
+              </RoleRoute>
             }
           />
 
           <Route
             path="/tech"
             element={
-              <PrivateRoute>
+              <RoleRoute allowedRoles={["technician"]}>
                 <TechDashboard />
-              </PrivateRoute>
+              </RoleRoute>
             }
           />
 

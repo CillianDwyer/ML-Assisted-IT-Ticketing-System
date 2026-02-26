@@ -1,6 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import PageHeader from "./PageHeader";
+import {
+  derivePriority,
+  getSlaState,
+  priorityClass,
+  slaClass,
+} from "../utils/ticketVisuals";
+
+const STATUSES = ["All", "Open", "In Progress", "Closed"];
+
+function statusClassName(status) {
+  if (status === "In Progress") return "in-progress";
+  return (status || "open").toLowerCase();
+}
 
 function MyTickets() {
   const [tickets, setTickets] = useState([]);
@@ -11,7 +25,7 @@ function MyTickets() {
     const fetchTickets = async () => {
       try {
         const response = await api.get("/tickets");
-        setTickets(response.data);
+        setTickets(response.data || []);
       } catch (error) {
         console.error("Error fetching tickets:", error);
       }
@@ -19,19 +33,20 @@ function MyTickets() {
     fetchTickets();
   }, []);
 
-  // 🔹 Filter logic
   const filteredTickets = tickets.filter((ticket) => {
     if (filter === "All") return true;
     return ticket.status === filter;
   });
 
   return (
-    <div className="ticket-card">
-      <h2>My Submitted Tickets</h2>
+    <div className="ticket-card dashboard-card">
+      <PageHeader
+        title="My Tickets"
+        subtitle="Track current progress and open a ticket to continue the thread."
+      />
 
-      {/* 🔹 Filter Buttons */}
       <div className="ticket-filters">
-        {["All", "Open", "In Progress", "Closed"].map((status) => (
+        {STATUSES.map((status) => (
           <button
             key={status}
             className={`filter-btn ${filter === status ? "active" : ""}`}
@@ -45,24 +60,55 @@ function MyTickets() {
       {filteredTickets.length === 0 ? (
         <p>No tickets found.</p>
       ) : (
-        <ul className="ticket-list">
-          {filteredTickets.map((ticket) => (
-            <li
-              key={ticket.id}
-              className="ticket-item clickable"
-              onClick={() => navigate(`/tickets/${ticket.id}`)}
-            >
-              <strong>{ticket.title}</strong>
-              <p>{ticket.description}</p>
-              <p>
-                <b>Status:</b> {ticket.status || "Pending"}
-              </p>
-              <p>
-                <b>Category:</b> {ticket.category || "Uncategorized"}
-              </p>
-            </li>
-          ))}
-        </ul>
+        <div className="table-wrap">
+          <table className="ticket-table queue-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Category</th>
+                <th>Priority</th>
+                <th>SLA</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTickets.map((ticket) => (
+                <tr
+                  key={ticket.id}
+                  className="clickable"
+                  onClick={() => navigate(`/tickets/${ticket.id}`)}
+                  title="Open ticket"
+                >
+                  <td>#{ticket.id}</td>
+                  <td className="cell-title">{ticket.title}</td>
+                  <td>
+                    <span className={`status-badge ${statusClassName(ticket.status)}`}>
+                      {ticket.status || "Open"}
+                    </span>
+                  </td>
+                  <td>{ticket.category || "Uncategorized"}</td>
+                  <td>
+                    <span className={priorityClass(derivePriority(ticket))}>
+                      {derivePriority(ticket)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={slaClass(getSlaState(ticket).level)}>
+                      {getSlaState(ticket).label}
+                    </span>
+                  </td>
+                  <td>
+                    {ticket.updated_at
+                      ? new Date(ticket.updated_at).toLocaleString()
+                      : "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

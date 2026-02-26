@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import api from "../api";
+import PageHeader from "./PageHeader";
 
 function TicketForm() {
   const [title, setTitle] = useState("");
@@ -8,46 +9,35 @@ function TicketForm() {
   const [isError, setIsError] = useState(false);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setMessage("");
-  setIsError(false);
+    e.preventDefault();
+    setMessage("");
+    setIsError(false);
 
-  try {
-    console.log("Posting ticket to:", "http://127.0.0.1:8000/tickets");
-
-    const response = await fetch("http://127.0.0.1:8000/tickets", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({
+    try {
+      await api.post("/tickets", {
         title,
         description,
         category: "Uncategorized",
         status: "Open",
-      }),
-    });
+      });
 
-    const data = await response.json();
-    console.log("Backend response:", data);
-
-    if (!response.ok) throw new Error(JSON.stringify(data));
-
-    setMessage("Ticket submitted successfully!");
-    setTitle("");
-    setDescription("");
-  } catch (error) {
-    console.error("Error submitting ticket:", error);
-    setMessage("Error submitting ticket");
-    setIsError(true);
-  }
-};
+      setMessage("Ticket submitted successfully!");
+      setTitle("");
+      setDescription("");
+    } catch (error) {
+      console.error("Error submitting ticket:", error);
+      setMessage("Error submitting ticket");
+      setIsError(true);
+    }
+  };
 
 
   return (
     <div className="ticket-card">
-      <h2>Submit IT Support Ticket</h2>
+      <PageHeader
+        title="Submit Ticket"
+        subtitle="Capture issue details once. The system handles classification and assignment."
+      />
       <form className="ticket-form" onSubmit={handleSubmit}>
         <input
           className="ticket-input"

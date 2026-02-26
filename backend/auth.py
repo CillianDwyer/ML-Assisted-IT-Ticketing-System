@@ -2,6 +2,7 @@
 # Handles password hasing, JWT token creation and verifying logged-in users.
 
 from datetime import datetime, timedelta
+import os
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
@@ -10,8 +11,8 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db  # Correct dependency import
 
-# In production, store this securely (e.g. .env)
-SECRET_KEY = "supersecretkey"
+# Demo-friendly fallback; can be overridden in environment.
+SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 

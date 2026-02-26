@@ -1,11 +1,12 @@
 import uvicorn
 from datetime import datetime, timedelta
+import re
 
 from fastapi import FastAPI, HTTPException, Depends, status, Body, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text, or_
 
 import models, database, schemas, auth
 from ml.ml_model import predict_category
@@ -19,12 +20,41 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 models.Base.metadata.create_all(bind=database.engine)
+
+def ensure_ticket_message_private_columns():
+    db = database.SessionLocal()
+    try:
+        cols = db.execute(text("PRAGMA table_info(ticket_messages)")).fetchall()
+        col_names = {c[1] for c in cols}
+
+        if "is_private" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE ticket_messages "
+                    "ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0"
+                )
+            )
+
+        if "recipient_id" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE ticket_messages "
+                    "ADD COLUMN recipient_id INTEGER"
+                )
+            )
+
+        db.commit()
+    finally:
+        db.close()
+
+ensure_ticket_message_private_columns()
 
 # ---------------------------
 # DB Dependency
@@ -94,6 +124,27 @@ def create_notification(
     db.add(notif)
     return notif
 
+
+def can_access_ticket(ticket: models.Ticket, user: models.User) -> bool:
+    if user.role == "admin":
+        return True
+    if user.role == "user":
+        return ticket.user_id == user.id
+    if user.role == "technician":
+        return ticket.technician_id == user.id
+    return False
+
+
+def extract_mentioned_email(text_content: str) -> str | None:
+    if not text_content:
+        return None
+
+    # Supports "please check @tech@example.com"
+    match = re.search(r"@([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})", text_content)
+    if not match:
+        return None
+    return match.group(1).lower()
+
 # ---------------------------
 # Auth
 # ---------------------------
@@ -104,7 +155,9 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_pw = auth.get_password_hash(user.password)
-    new_user = models.User(email=user.email, hashed_password=hashed_pw, role=user.role or "user")
+    # Public registration is always a regular user.
+    # Admin/technician demo users are seeded separately.
+    new_user = models.User(email=user.email, hashed_password=hashed_pw, role="user")
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -551,6 +604,30 @@ def get_all_users(
         raise HTTPException(status_code=403, detail="Only admins can view users")
     return db.query(models.User).all()
 
+
+@app.get("/tickets/{ticket_id}/assist-users", response_model=list[schemas.UserResponse])
+def get_assist_users(
+    ticket_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if not can_access_ticket(ticket, current_user):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if current_user.role not in ["technician", "admin"]:
+        raise HTTPException(status_code=403, detail="Only technicians/admins can send private assistance messages")
+
+    return (
+        db.query(models.User)
+        .filter(
+            models.User.role.in_(["technician", "admin"]),
+            models.User.id != current_user.id
+        )
+        .all()
+    )
+
 # ---------------------------
 # Ticket Messages
 # ---------------------------
@@ -560,11 +637,23 @@ def get_ticket_messages(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    messages = (
-        db.query(models.TicketMessage)
-        .filter(models.TicketMessage.ticket_id == ticket_id)
-        .all()
-    )
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if not can_access_ticket(ticket, current_user):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    query = db.query(models.TicketMessage).filter(models.TicketMessage.ticket_id == ticket_id)
+    if current_user.role != "admin":
+        query = query.filter(
+            or_(
+                models.TicketMessage.is_private == False,
+                models.TicketMessage.sender_id == current_user.id,
+                models.TicketMessage.recipient_id == current_user.id
+            )
+        )
+
+    messages = query.order_by(models.TicketMessage.id.asc()).all()
 
     return [
         {
@@ -572,7 +661,9 @@ def get_ticket_messages(
             "content": msg.content,
             "sender_id": msg.sender_id,
             "sender_email": msg.sender.email,
-            "created_at": msg.created_at
+            "created_at": msg.created_at,
+            "is_private": bool(msg.is_private),
+            "recipient_email": msg.recipient.email if msg.recipient else None
         }
         for msg in messages
     ]
@@ -588,48 +679,89 @@ def add_ticket_message(
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if not can_access_ticket(ticket, current_user):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    mentioned_email = extract_mentioned_email(message.content)
+    target_email = (message.private_to_email.lower() if message.private_to_email else None) or mentioned_email
+
+    recipient = None
+    is_private = False
+
+    if target_email:
+        if current_user.role not in ["technician", "admin"]:
+            raise HTTPException(status_code=403, detail="Only technicians/admins can send private assistance messages")
+
+        recipient = (
+            db.query(models.User)
+            .filter(
+                models.User.email == target_email,
+                models.User.role.in_(["technician", "admin"])
+            )
+            .first()
+        )
+        if not recipient:
+            raise HTTPException(status_code=404, detail="Private recipient must be an existing technician/admin email")
+        if recipient.id == current_user.id:
+            raise HTTPException(status_code=400, detail="Cannot send private message to yourself")
+
+        is_private = True
 
     new_message = models.TicketMessage(
         content=message.content,
         sender_id=current_user.id,
         ticket_id=ticket_id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=datetime.utcnow().isoformat(),
+        is_private=is_private,
+        recipient_id=recipient.id if recipient else None
     )
 
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
 
-    recipients = set()
-    if ticket.user_id and ticket.user_id != current_user.id:
-        recipients.add(ticket.user_id)
-    if ticket.technician_id and ticket.technician_id != current_user.id:
-        recipients.add(ticket.technician_id)
-
-    for uid in recipients:
+    if is_private and recipient and recipient.id != current_user.id:
         create_notification(
             db,
-            user_id=uid,
+            user_id=recipient.id,
             type="message",
-            content=f"New message on ticket #{ticket.id}: {ticket.title}",
+            content=f"Private assist message on ticket #{ticket.id}: {ticket.title}",
             ticket_id=ticket.id
         )
-    if recipients:
         db.commit()
+    else:
+        recipients = set()
+        if ticket.user_id and ticket.user_id != current_user.id:
+            recipients.add(ticket.user_id)
+        if ticket.technician_id and ticket.technician_id != current_user.id:
+            recipients.add(ticket.technician_id)
+
+        for uid in recipients:
+            create_notification(
+                db,
+                user_id=uid,
+                type="message",
+                content=f"New message on ticket #{ticket.id}: {ticket.title}",
+                ticket_id=ticket.id
+            )
+        if recipients:
+            db.commit()
 
     return {
         "id": new_message.id,
         "content": new_message.content,
         "sender_id": new_message.sender_id,
         "sender_email": current_user.email,
-        "created_at": new_message.created_at
+        "created_at": new_message.created_at,
+        "is_private": bool(new_message.is_private),
+        "recipient_email": recipient.email if recipient else None
     }
 
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     # lightweight DB check
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         return {"status": "ok", "db": "ok"}
     except Exception:
         return {"status": "degraded", "db": "error"}
