@@ -46,6 +46,7 @@ class Ticket(Base):
     description = Column(String)
     category = Column(String, default="Uncategorized")
     status = Column(String, default="Open")
+    priority = Column(String, default="Low", nullable=False)
 
     user_id = Column(Integer, ForeignKey("users.id"))
     technician_id = Column(Integer, ForeignKey("users.id"), nullable=True)

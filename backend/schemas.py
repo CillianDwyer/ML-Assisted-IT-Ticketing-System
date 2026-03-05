@@ -38,6 +38,8 @@ class TicketResponse(BaseModel):
     description: str
     category: str
     status: str
+    priority: str
+    sla_state: str
     user_id: int
     technician_id: Optional[int] = None
     user_email: Optional[str] = None

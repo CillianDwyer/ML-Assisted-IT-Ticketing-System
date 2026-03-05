@@ -34,6 +34,19 @@ models.Base.metadata.create_all(bind=database.engine)
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+PRIORITY_THRESHOLDS_HOURS = {
+    "low": 72,
+    "medium": 48,
+    "high": 24,
+    "critical": 12,
+}
+PRIORITY_ORDER = ["Low", "Medium", "High", "Critical"]
+SLA_TARGET_HOURS = {
+    "Low": 72,
+    "Medium": 48,
+    "High": 24,
+    "Critical": 12,
+}
 
 
 def ensure_ticket_message_columns():
@@ -95,6 +108,121 @@ def ensure_ticket_message_columns():
         db.close()
 
 ensure_ticket_message_columns()
+
+
+def compute_ticket_priority(
+    *,
+    status: str | None,
+    category: str | None,
+    created_at: datetime | str | None
+) -> str:
+    if not status or status == "Closed":
+        return "Low"
+
+    created_dt = created_at
+    if isinstance(created_at, str):
+        try:
+            created_dt = datetime.fromisoformat(created_at)
+        except ValueError:
+            created_dt = None
+
+    age_hours = 0.0
+    if isinstance(created_dt, datetime):
+        age_hours = (datetime.utcnow() - created_dt).total_seconds() / 3600.0
+
+    normalized_category = (category or "").strip()
+
+    # Base priority from category.
+    if normalized_category in {"Network", "Access"}:
+        priority = "High"
+    elif normalized_category in {"Hardware", "Password Reset"}:
+        priority = "Medium"
+    else:
+        priority = "Low"
+
+    # Age-based escalation.
+    if age_hours >= PRIORITY_THRESHOLDS_HOURS["low"]:
+        return "Critical"
+
+    base_idx = PRIORITY_ORDER.index(priority)
+    if age_hours >= PRIORITY_THRESHOLDS_HOURS["medium"]:
+        return PRIORITY_ORDER[min(base_idx + 2, len(PRIORITY_ORDER) - 1)]
+    if age_hours >= PRIORITY_THRESHOLDS_HOURS["high"]:
+        return PRIORITY_ORDER[min(base_idx + 1, len(PRIORITY_ORDER) - 1)]
+    if age_hours >= PRIORITY_THRESHOLDS_HOURS["critical"] and priority == "High":
+        return "Critical"
+    return priority
+
+
+def ensure_ticket_priority_column():
+    db = database.SessionLocal()
+    try:
+        cols = db.execute(text("PRAGMA table_info(tickets)")).fetchall()
+        col_names = {c[1] for c in cols}
+
+        if "priority" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE tickets "
+                    "ADD COLUMN priority VARCHAR NOT NULL DEFAULT 'Low'"
+                )
+            )
+            db.commit()
+
+        tickets = db.query(models.Ticket).all()
+        for ticket in tickets:
+            ticket.priority = compute_ticket_priority(
+                status=ticket.status,
+                category=ticket.category,
+                created_at=ticket.created_at
+            )
+        db.commit()
+    finally:
+        db.close()
+
+
+ensure_ticket_priority_column()
+
+
+def refresh_ticket_priority(ticket: models.Ticket) -> bool:
+    computed = compute_ticket_priority(
+        status=ticket.status,
+        category=ticket.category,
+        created_at=ticket.created_at
+    )
+    if ticket.priority != computed:
+        ticket.priority = computed
+        return True
+    return False
+
+
+def compute_ticket_sla_state(ticket: models.Ticket) -> str:
+    if ticket.status == "Closed":
+        return "met"
+
+    created_at = ticket.created_at
+    if not isinstance(created_at, datetime):
+        return "on_track"
+
+    effective_priority = ticket.priority or compute_ticket_priority(
+        status=ticket.status,
+        category=ticket.category,
+        created_at=ticket.created_at
+    )
+    target_hours = SLA_TARGET_HOURS.get(effective_priority, 48)
+
+    age_hours = (datetime.utcnow() - created_at).total_seconds() / 3600.0
+    ratio = age_hours / target_hours if target_hours > 0 else 0
+
+    if ratio >= 1.0:
+        return "breached"
+    if ratio >= 0.75:
+        return "at_risk"
+    return "on_track"
+
+
+def set_ticket_sla_state(ticket: models.Ticket):
+    ticket.sla_state = compute_ticket_sla_state(ticket)
 
 # ---------------------------
 # DB Dependency
@@ -414,10 +542,15 @@ def get_all_tickets(
         raise HTTPException(status_code=403, detail="Only admins can view all tickets")
 
     tickets = db.query(models.Ticket).all()
+    changed = False
     for t in tickets:
+        changed = refresh_ticket_priority(t) or changed
+        set_ticket_sla_state(t)
         t.user_email = db.query(models.User.email).filter(models.User.id == t.user_id).scalar()
         if t.technician_id:
             t.technician_email = db.query(models.User.email).filter(models.User.id == t.technician_id).scalar()
+    if changed:
+        db.commit()
     return tickets
 
 
@@ -427,10 +560,15 @@ def get_tickets(
     db: Session = Depends(get_db)
 ):
     tickets = db.query(models.Ticket).filter(models.Ticket.user_id == current_user.id).all()
+    changed = False
     for t in tickets:
+        changed = refresh_ticket_priority(t) or changed
+        set_ticket_sla_state(t)
         t.user_email = db.query(models.User.email).filter(models.User.id == t.user_id).scalar()
         if t.technician_id:
             t.technician_email = db.query(models.User.email).filter(models.User.id == t.technician_id).scalar()
+    if changed:
+        db.commit()
     return tickets
 
 
@@ -443,9 +581,14 @@ def get_assigned_tickets(
         raise HTTPException(status_code=403, detail="Only technicians can view assigned tickets")
 
     tickets = db.query(models.Ticket).filter(models.Ticket.technician_id == current_user.id).all()
+    changed = False
     for t in tickets:
+        changed = refresh_ticket_priority(t) or changed
+        set_ticket_sla_state(t)
         t.user_email = db.query(models.User.email).filter(models.User.id == t.user_id).scalar()
         t.technician_email = current_user.email
+    if changed:
+        db.commit()
     return tickets
 
 
@@ -464,9 +607,13 @@ def get_ticket_by_id(
     if current_user.role == "technician" and ticket.technician_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    changed = refresh_ticket_priority(ticket)
+    set_ticket_sla_state(ticket)
     ticket.user_email = db.query(models.User.email).filter(models.User.id == ticket.user_id).scalar()
     if ticket.technician_id:
         ticket.technician_email = db.query(models.User.email).filter(models.User.id == ticket.technician_id).scalar()
+    if changed:
+        db.commit()
 
     return ticket
 
@@ -480,6 +627,7 @@ def create_ticket(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     predicted_category = predict_category(ticket.description)
+    now = datetime.utcnow()
 
     technician = (
         db.query(models.User)
@@ -492,9 +640,15 @@ def create_ticket(
         description=ticket.description,
         category=predicted_category,
         status="Open",
+        priority=compute_ticket_priority(
+            status="Open",
+            category=predicted_category,
+            created_at=now
+        ),
         user_id=current_user.id,
         technician_id=technician.id if technician else None,
-        updated_at=datetime.utcnow()
+        created_at=now,
+        updated_at=now
     )
 
     db.add(db_ticket)
@@ -511,6 +665,7 @@ def create_ticket(
         )
         db.commit()
 
+    set_ticket_sla_state(db_ticket)
     return db_ticket
 
 
@@ -534,6 +689,11 @@ def assign_ticket(
 
     ticket.technician_id = technician_id
     ticket.updated_at = datetime.utcnow()
+    ticket.priority = compute_ticket_priority(
+        status=ticket.status,
+        category=ticket.category,
+        created_at=ticket.created_at
+    )
 
     if not ticket.status:
         ticket.status = "Open"
@@ -550,6 +710,7 @@ def assign_ticket(
     )
     db.commit()
 
+    set_ticket_sla_state(ticket)
     return ticket
 
 
@@ -579,6 +740,11 @@ def update_ticket_status(
         ticket.closed_at = datetime.utcnow()
     else:
         ticket.closed_at = None
+    ticket.priority = compute_ticket_priority(
+        status=ticket.status,
+        category=ticket.category,
+        created_at=ticket.created_at
+    )
 
     db.commit()
     db.refresh(ticket)
@@ -600,6 +766,7 @@ def update_ticket_status(
     if recipients:
         db.commit()
 
+    set_ticket_sla_state(ticket)
     return ticket
 
 
@@ -633,6 +800,11 @@ def update_ticket_category(
 
     if not ticket.status:
         ticket.status = "Open"
+    ticket.priority = compute_ticket_priority(
+        status=ticket.status,
+        category=ticket.category,
+        created_at=ticket.created_at
+    )
 
     db.commit()
     db.refresh(ticket)
@@ -647,6 +819,7 @@ def update_ticket_category(
         )
         db.commit()
 
+    set_ticket_sla_state(ticket)
     return ticket
 
 
