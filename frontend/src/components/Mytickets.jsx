@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import EmptyState from "./EmptyState";
+import FilterBar from "./FilterBar";
 import PageHeader from "./PageHeader";
 import {
   derivePriority,
+  getTicketTeam,
   getSlaState,
   priorityClass,
   slaClass,
@@ -42,10 +45,11 @@ function MyTickets() {
     <div className="ticket-card dashboard-card">
       <PageHeader
         title="My Tickets"
-        subtitle="Track current progress and open a ticket to continue the thread."
+        subtitle="Track progress and open any ticket to continue the conversation."
       />
 
-      <div className="ticket-filters">
+      <FilterBar>
+        <div className="ticket-filters">
         {STATUSES.map((status) => (
           <button
             key={status}
@@ -55,10 +59,14 @@ function MyTickets() {
             {status}
           </button>
         ))}
-      </div>
+        </div>
+      </FilterBar>
 
       {filteredTickets.length === 0 ? (
-        <p>No tickets found.</p>
+        <EmptyState
+          title="No tickets match this view"
+          description="Try a different status filter to see more of your tickets."
+        />
       ) : (
         <div className="table-wrap">
           <table className="ticket-table queue-table">
@@ -67,7 +75,8 @@ function MyTickets() {
                 <th>ID</th>
                 <th>Title</th>
                 <th>Status</th>
-                <th>Category</th>
+                <th>Team</th>
+                <th>Issue Type</th>
                 <th>Priority</th>
                 <th>SLA</th>
                 <th>Updated</th>
@@ -88,6 +97,7 @@ function MyTickets() {
                       {ticket.status || "Open"}
                     </span>
                   </td>
+                  <td>{ticket.team || getTicketTeam(ticket)}</td>
                   <td>{ticket.category || "Uncategorized"}</td>
                   <td>
                     <span className={priorityClass(derivePriority(ticket))}>

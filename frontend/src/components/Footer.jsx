@@ -10,7 +10,7 @@ function Footer() {
         <div className="footer-brand">
           <div className="footer-logo">IT Support Desk</div>
           <div className="footer-sub">
-            Internal ticketing • Faster triage • Clear communication
+            Internal ticketing | Faster triage | Clear communication
           </div>
         </div>
 
@@ -31,8 +31,8 @@ function Footer() {
       </div>
 
       <div className="footer-bottom">
-        <span>© {year} IT Support Desk</span>
-        <span className="footer-dot">•</span>
+        <span>(c) {year} IT Support Desk</span>
+        <span className="footer-dot">|</span>
         <span className="footer-meta">Built for internal use</span>
       </div>
     </footer>

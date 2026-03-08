@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import MetricCard from "./MetricCard";
+import SectionCard from "./SectionCard";
 
 function StatusPill({ status, detail }) {
   const cls =
     status === "Operational"
       ? "status-pill ok"
       : status === "Degraded"
-      ? "status-pill warn"
-      : status === "Down"
-      ? "status-pill down"
-      : "status-pill unknown";
+        ? "status-pill warn"
+        : status === "Down"
+          ? "status-pill down"
+          : "status-pill unknown";
 
   return (
     <span className={cls} title={detail || ""}>
@@ -19,18 +21,18 @@ function StatusPill({ status, detail }) {
   );
 }
 
-function StatCard({ label, value, sub }) {
+function FeatureCard({ title, text }) {
   return (
-    <div className="home-stat">
-      <div className="home-stat-label">{label}</div>
-      <div className="home-stat-value">{value}</div>
-      {sub ? <div className="home-stat-sub">{sub}</div> : null}
+    <div className="about-feature-card">
+      <h4>{title}</h4>
+      <p>{text}</p>
     </div>
   );
 }
 
 function About() {
   const token = localStorage.getItem("token");
+  const [activeFaq, setActiveFaq] = useState("");
 
   const [health, setHealth] = useState({
     status: "Unknown",
@@ -49,26 +51,21 @@ function About() {
   const avgResText = useMemo(() => {
     const v = publicMetrics.avgResolutionHours;
     if (v == null) return "Unavailable";
-    // keep it friendly for a home page
     if (v < 1) return `${Math.round(v * 60)} mins`;
     return `${Number(v).toFixed(1)} hrs`;
   }, [publicMetrics.avgResolutionHours]);
 
   const fetchHealth = async () => {
     try {
-      // ✅ Recommended: expose a public health endpoint (no auth)
-      // If your backend uses something else, update the path.
       const res = await api.get("/health");
-      // Support a few common shapes:
-      // { status: "ok" } or { ok: true } or { status: "Operational" }
       const raw = res.data;
 
       const normalized =
         raw?.status?.toLowerCase() === "ok" || raw?.ok === true
           ? "Operational"
           : raw?.status === "Operational" || raw?.status === "Degraded" || raw?.status === "Down"
-          ? raw.status
-          : "Operational";
+            ? raw.status
+            : "Operational";
 
       setHealth({
         status: normalized,
@@ -86,9 +83,6 @@ function About() {
 
   const fetchPublicMetrics = async () => {
     try {
-      // ✅ Recommended: expose a public metrics endpoint (no auth)
-      // Example response:
-      // { active_tickets: 12, avg_resolution_hours: 5.6, last_updated: "..." }
       const res = await api.get("/public/metrics");
       const d = res.data || {};
 
@@ -98,13 +92,11 @@ function About() {
         lastUpdated: d.last_updated ?? d.lastUpdated ?? null,
       });
     } catch (e) {
-      // No public endpoint? Don’t break the page.
-      setPublicMetrics((prev) => ({
-        ...prev,
+      setPublicMetrics({
         activeTickets: null,
         avgResolutionHours: null,
         lastUpdated: null,
-      }));
+      });
     }
   };
 
@@ -113,8 +105,8 @@ function About() {
       setMyOpenTickets(null);
       return;
     }
+
     try {
-      // This endpoint should require auth — we only call it when logged in.
       const res = await api.get("/tickets");
       const list = Array.isArray(res.data) ? res.data : [];
       const openCount = list.filter((t) => t.status === "Open" || t.status === "In Progress").length;
@@ -129,32 +121,33 @@ function About() {
     fetchPublicMetrics();
     fetchMyTicketsIfLoggedIn();
 
-    // light polling for status/metrics (public-safe)
     const id = setInterval(() => {
       fetchHealth();
       fetchPublicMetrics();
     }, 30000);
 
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return (
     <div className="ticket-card home-card">
-      {/* HERO */}
-      <div className="home-hero">
+      <div className="home-hero about-hero">
         <div className="home-hero-text">
+          <span className="submit-ticket-eyebrow">Platform Overview</span>
           <h2 className="home-title">IT Support Desk</h2>
-          <p className="home-subtitle">
-            A simple internal support portal for reporting issues, routing them to the right technician,
-            and keeping communication in one place.
+          <p className="home-subtitle about-subtitle">
+            A focused internal support platform for submitting issues, routing them to the correct
+            team, and keeping every update in one ticket thread.
           </p>
 
           <div className="home-badges">
             <div className="home-badge">
               System status: <StatusPill status={health.status} detail={health.detail} />
             </div>
+            <div className="home-badge">Issue type prediction | team routing | technician queue</div>
+          </div>
 
+          <div className="about-hero-actions">
             <button
               className="home-refresh"
               onClick={() => {
@@ -165,38 +158,36 @@ function About() {
               type="button"
               title="Refresh status"
             >
-              ↻ Refresh
+              Refresh live stats
             </button>
           </div>
 
           {health.checkedAt && (
-            <div className="home-meta">
-              Last checked: {health.checkedAt.toLocaleString()}
-            </div>
+            <div className="home-meta">Last checked: {health.checkedAt.toLocaleString()}</div>
           )}
         </div>
 
         <div className="home-hero-panel">
           <div className="home-stats-grid">
-            <StatCard
+            <MetricCard
               label="Active tickets"
               value={publicMetrics.activeTickets ?? "Unavailable"}
-              sub="Across the system"
+              subtext="Current open workload"
             />
-            <StatCard
+            <MetricCard
               label="Avg resolution time"
               value={avgResText}
-              sub="Rolling window (if enabled)"
+              subtext="Rolling average if metrics are enabled"
             />
-            <StatCard
+            <MetricCard
               label="Your open tickets"
-              value={token ? (myOpenTickets ?? "—") : "Login required"}
-              sub={token ? "Open or in progress" : "Visible once signed in"}
+              value={token ? (myOpenTickets ?? "-") : "Login required"}
+              subtext={token ? "Open or in progress" : "Visible once signed in"}
             />
-            <StatCard
-              label="Security"
-              value="Role-based"
-              sub="Users • Technicians • Admins"
+            <MetricCard
+              label="Support model"
+              value="5 teams"
+              subtext="Service Desk, Desktop, Network, Systems, Security"
             />
           </div>
 
@@ -205,114 +196,163 @@ function About() {
               Metrics updated: {new Date(publicMetrics.lastUpdated).toLocaleString()}
             </div>
           ) : (
-            <div className="home-meta">Metrics: enabled if /public/metrics exists</div>
+            <div className="home-meta">Metrics appear here when the public metrics endpoint is available.</div>
           )}
         </div>
       </div>
 
-      {/* VALUE PROPS */}
-      <div className="home-section">
-        <h3>What you can do</h3>
-        <ul className="about-list">
-          <li>
-            <b>Submit issues</b> and track progress through <b>Open → In Progress → Closed</b>
-          </li>
-          <li>
-            <b>Get routed faster</b> with ML-assisted categorisation and technician speciality matching
-          </li>
-          <li>
-            <b>Keep context</b> in the ticket conversation thread (no chasing email chains)
-          </li>
-        </ul>
+      <SectionCard title="Key Capabilities">
+        <div className="about-feature-grid">
+          <FeatureCard
+            title="Submit and track issues"
+            text="Users can create tickets, follow status changes, and continue the discussion inside one ticket conversation."
+          />
+          <FeatureCard
+            title="Smart routing"
+            text="The system predicts an issue type from the ticket description, maps it to a support team, and routes it accordingly."
+          />
+          <FeatureCard
+            title="Priority and SLA logic"
+            text="Priority starts from the issue type and escalates with ticket age, helping teams surface urgent work faster."
+          />
+        </div>
+      </SectionCard>
+
+      <div className="about-two-column">
+        <SectionCard title="How the platform works" className="about-panel">
+          <div className="about-flow-grid">
+            <div className="about-flow-step">
+              <span>1</span>
+              <strong>User submits a ticket</strong>
+              <p>The user provides a title and description, and the backend handles the rest.</p>
+            </div>
+            <div className="about-flow-step">
+              <span>2</span>
+              <strong>ML predicts issue type</strong>
+              <p>The classifier predicts a detailed issue type from the ticket description.</p>
+            </div>
+            <div className="about-flow-step">
+              <span>3</span>
+              <strong>Team and priority are derived</strong>
+              <p>The issue type maps to a team, and the system calculates base priority and SLA state.</p>
+            </div>
+            <div className="about-flow-step">
+              <span>4</span>
+              <strong>Conversation stays in one place</strong>
+              <p>Users, technicians, and admins collaborate inside the ticket thread with attachments and private assist notes.</p>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Architecture at a glance" className="about-panel">
+          <div className="arch-diagram arch-flow-diagram" aria-label="System architecture diagram">
+            <div className="arch-node arch-node-user">User</div>
+            <div className="arch-arrow arch-arrow-down arch-arrow-user-front" />
+
+            <div className="arch-node arch-node-frontend">React Frontend</div>
+            <div className="arch-arrow arch-arrow-down arch-arrow-front-back" />
+
+            <div className="arch-node arch-node-backend">FastAPI Backend</div>
+
+            <div className="arch-branch-row">
+              <div className="arch-branch arch-branch-left" />
+              <div className="arch-branch arch-branch-center" />
+              <div className="arch-branch arch-branch-right" />
+            </div>
+
+            <div className="arch-node-row">
+              <div className="arch-node">SQLite</div>
+              <div className="arch-node">ML Classifier</div>
+              <div className="arch-node">Auth + RBAC</div>
+            </div>
+
+            <div className="arch-arrow arch-arrow-down arch-arrow-sqlite-data" />
+            <div className="arch-node arch-node-storage">
+              Tickets, users, messages, notifications
+            </div>
+          </div>
+          <p className="muted">
+            Some details on this page stay limited when you are not signed in, but platform health
+            and public metrics can still be shown when enabled.
+          </p>
+        </SectionCard>
       </div>
 
-      {/* FAQ QUICK LINKS */}
       <div className="home-section">
         <h3>Quick Answers</h3>
         <div className="faq-links">
-          <a href="#faq-access" className="faq-link-chip">Account Access</a>
-          <a href="#faq-routing" className="faq-link-chip">Auto Assignment</a>
-          <a href="#faq-private" className="faq-link-chip">Private Assist Chat</a>
-          <a href="#faq-sla" className="faq-link-chip">Response Time</a>
-          <a href="#faq-data" className="faq-link-chip">Data Visibility</a>
-          <a href="#faq-status" className="faq-link-chip">System Status</a>
+          <button type="button" className="faq-link-chip" onClick={() => setActiveFaq("faq-access")}>
+            Account access
+          </button>
+          <button type="button" className="faq-link-chip" onClick={() => setActiveFaq("faq-routing")}>
+            Routing
+          </button>
+          <button type="button" className="faq-link-chip" onClick={() => setActiveFaq("faq-private")}>
+            Private assist
+          </button>
+          <button type="button" className="faq-link-chip" onClick={() => setActiveFaq("faq-sla")}>
+            Priority and SLA
+          </button>
+          <button type="button" className="faq-link-chip" onClick={() => setActiveFaq("faq-data")}>
+            Visibility
+          </button>
+          <button type="button" className="faq-link-chip" onClick={() => setActiveFaq("faq-status")}>
+            System status
+          </button>
         </div>
       </div>
 
-      {/* HOW IT WORKS */}
-      <div className="home-section">
-        <h3>How it works</h3>
-        <pre className="arch-diagram">
-{`Employee
-  |
-  v
-React Frontend (Routes + Components)
-  |
-  v
-FastAPI Backend (Auth + RBAC + Ticket Logic)
-  |                     |
-  v                     v
-SQLite Database         ML Classifier
-(Tickets, Users,        (Category prediction
- Messages)               from description)`}
-        </pre>
-        <p className="muted">
-          Some information on this page is intentionally limited when you’re not signed in.
-        </p>
-      </div>
+      <SectionCard title="Frequently Asked Questions" className="home-section faq-section">
+        <div className="about-faq-grid">
+          <div id="faq-access" className={`faq-item ${activeFaq === "faq-access" ? "active" : ""}`}>
+            <h4>Who can create an account?</h4>
+            <p>
+              Internal users can register for a standard user account. Technician and admin accounts
+              are managed separately for support operations.
+            </p>
+          </div>
 
-      {/* FAQ */}
-      <div className="home-section faq-section">
-        <h3>Frequently Asked Questions</h3>
+          <div id="faq-routing" className={`faq-item ${activeFaq === "faq-routing" ? "active" : ""}`}>
+            <h4>How are tickets assigned?</h4>
+            <p>
+              The system predicts an issue type from the description, maps that issue type to a support
+              team, and routes the ticket to a matching technician when one is available.
+            </p>
+          </div>
 
-        <div id="faq-access" className="faq-item">
-          <h4>Who can create an account?</h4>
-          <p>
-            Internal users can register for a standard user account. Technician and admin accounts
-            are managed separately for support operations.
-          </p>
+          <div id="faq-private" className={`faq-item ${activeFaq === "faq-private" ? "active" : ""}`}>
+            <h4>What is private assist messaging?</h4>
+            <p>
+              Technicians and admins can send private assistance messages inside a ticket thread so
+              internal collaboration stays separate from the requester-facing conversation.
+            </p>
+          </div>
+
+          <div id="faq-sla" className={`faq-item ${activeFaq === "faq-sla" ? "active" : ""}`}>
+            <h4>How are priority and SLA decided?</h4>
+            <p>
+              Each ticket starts with a base priority from its issue type, then escalates if it remains
+              open for long enough. SLA state is shown as On Track, At Risk, or Breached.
+            </p>
+          </div>
+
+          <div id="faq-data" className={`faq-item ${activeFaq === "faq-data" ? "active" : ""}`}>
+            <h4>Who can see my ticket details?</h4>
+            <p>
+              Standard users can access their own tickets. Assigned technicians and admins can access
+              tickets relevant to their role permissions.
+            </p>
+          </div>
+
+          <div id="faq-status" className={`faq-item ${activeFaq === "faq-status" ? "active" : ""}`}>
+            <h4>Where can I check platform health?</h4>
+            <p>
+              This page shows live service status and public metrics when those endpoints are available,
+              including active ticket volume and resolution indicators.
+            </p>
+          </div>
         </div>
-
-        <div id="faq-routing" className="faq-item">
-          <h4>How are tickets assigned?</h4>
-          <p>
-            The system predicts a category from your description, then routes tickets to a matching
-            technician speciality when available.
-          </p>
-        </div>
-
-        <div id="faq-private" className="faq-item">
-          <h4>What is private assist messaging?</h4>
-          <p>
-            Technicians and admins can send private assistance messages inside a ticket thread to
-            collaborate without exposing internal notes to the ticket requester.
-          </p>
-        </div>
-
-        <div id="faq-sla" className="faq-item">
-          <h4>How is response urgency shown?</h4>
-          <p>
-            Queue views highlight derived priority and SLA state (On Track, At Risk, Breached) to
-            help teams triage work faster.
-          </p>
-        </div>
-
-        <div id="faq-data" className="faq-item">
-          <h4>Who can see my ticket details?</h4>
-          <p>
-            Standard users can access their own tickets. Assigned technicians and admins can access
-            tickets relevant to their role permissions.
-          </p>
-        </div>
-
-        <div id="faq-status" className="faq-item">
-          <h4>Where can I check platform health?</h4>
-          <p>
-            This page shows live service and metrics snapshots when available, including active ticket
-            volume and average resolution indicators.
-          </p>
-        </div>
-      </div>
+      </SectionCard>
     </div>
   );
 }

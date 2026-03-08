@@ -65,11 +65,11 @@ Frontend runs at: `http://127.0.0.1:5173`
 - Password: `admin123`
 
 ### Technicians
-- `hardware@example.com` / `tech123`
-- `passwordrest@example.com` / `tech123`
-- `software@example.com` / `tech123`
-- `access@example.com` / `tech123`
-- `network@example.com` / `tech123`
+- `servicedesk@example.com` / `tech123`
+- `desktopsupport@example.com` / `tech123`
+- `networkteam@example.com` / `tech123`
+- `systemsteam@example.com` / `tech123`
+- `securityteam@example.com` / `tech123`
 
 You can also register normal end users from the Register page.
 
@@ -90,7 +90,64 @@ You can also register normal end users from the Register page.
 
 - API base URL is set in `frontend/src/api.js`.
 - SQLite DB file is `backend/tickets.db`.
-- Ticket category is predicted by `backend/ml/ml_model.py` using `backend/ml/ticket_classifier.pkl`.
+- Ticket issue type is predicted by `backend/ml/ml_model.py` using `backend/ml/ticket_classifier.pkl`.
+- The backend maps predicted issue types onto 5 support teams for technician assignment.
+- Tickets now persist both the detailed issue type (`category`) and the assigned support team (`team`).
+
+## Priority Policy
+
+Ticket priority is derived in two steps:
+
+1. A base priority is assigned from the predicted or selected issue type.
+2. The ticket is escalated further based on how long it has been open.
+
+### Base Priority by Issue Type
+
+#### Critical
+- `Account Compromise`
+- `Malware / Virus Alert`
+- `Network Outage / Connectivity Issue`
+- `Server Down / Service Outage`
+
+#### High
+- `Account Lockout`
+- `Active Directory Issue`
+- `DNS / Network Resolution Issue`
+- `File Server Issue`
+- `MFA / 2FA Issue`
+- `OS / Boot Issue`
+- `Phishing Report`
+- `Suspicious Login`
+- `VM / Infrastructure Issue`
+- `VPN Issue`
+
+#### Medium
+- `Backup / Restore Issue`
+- `Disk Space / Storage Issue`
+- `Email Access Issue`
+- `Laptop/Desktop Hardware Issue`
+- `Mailbox / Email Sync Issue`
+- `Network Drive Access Issue`
+- `Password Reset`
+- `Security Policy Violation`
+- `Wi-Fi Connectivity Issue`
+
+#### Low
+- `Access Request`
+- `Basic Software Issue`
+- `Device Performance Issue`
+- `Peripheral / Docking Issue`
+- `Printer Issue`
+- `Software Installation Request`
+
+### Age-Based Escalation
+
+- Closed tickets are treated as `Low`.
+- After `24` hours, priority increases by one level.
+- After `48` hours, priority increases by two levels.
+- After `72` hours, the ticket becomes `Critical`.
+
+This policy is implemented in the backend and mirrored in the frontend for consistent display.
 
 ## Troubleshooting
 

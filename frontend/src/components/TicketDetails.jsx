@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api";
+import EmptyState from "./EmptyState";
 import PageHeader from "./PageHeader";
+import SectionCard from "./SectionCard";
+import { getPriorityExplanation } from "../utils/ticketVisuals";
 
 function fmtDate(value) {
   if (!value) return "-";
@@ -19,6 +22,7 @@ function TicketDetails() {
   const [isPrivateMessage, setIsPrivateMessage] = useState(false);
   const [privateRecipientEmail, setPrivateRecipientEmail] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   const currentUserEmail = localStorage.getItem("email");
@@ -147,27 +151,94 @@ function TicketDetails() {
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
   }, [ticket, messages]);
 
+  const priorityExplanation = useMemo(
+    () => (ticket ? getPriorityExplanation(ticket) : null),
+    [ticket]
+  );
+
+  const statusClass = (ticket?.status || "open").toLowerCase().replace(/\s+/g, "-");
+  const priorityClass = (priorityExplanation?.currentPriority || ticket?.priority || "medium")
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+
   if (!ticket) return <p>Loading ticket...</p>;
 
   return (
-    <div className="ticket-card dashboard-card">
+    <div className="ticket-card dashboard-card ticket-workspace-shell">
       <PageHeader
         title={`Ticket #${ticket.id}`}
         subtitle={ticket.title}
         action={
           <button className="page-header-action" onClick={() => navigate(-1)}>
-            Back
+            Back to Tickets
           </button>
         }
       />
 
-      <div className="workspace-grid">
+      <div className="ticket-workspace-hero">
+        <div className="ticket-workspace-topline">
+          <button className="ticket-breadcrumb" onClick={() => navigate(-1)}>
+            My Tickets / Ticket #{ticket.id}
+          </button>
+          <span className="ticket-context-note">Ticket conversation</span>
+        </div>
+        <div className="ticket-summary-strip">
+          <div className="ticket-summary-card">
+            <span className="ticket-summary-label">Status</span>
+            <span className={`status-badge ${statusClass}`}>{ticket.status}</span>
+          </div>
+          <div className="ticket-summary-card">
+            <span className="ticket-summary-label">Priority</span>
+            <span className={`priority-badge ${priorityClass}`}>
+              {priorityExplanation?.currentPriority || ticket.priority || "Medium"}
+            </span>
+          </div>
+          <div className="ticket-summary-card">
+            <span className="ticket-summary-label">Team</span>
+            <strong>{ticket.team || "Unassigned"}</strong>
+          </div>
+          <div className="ticket-summary-card">
+            <span className="ticket-summary-label">Issue Type</span>
+            <strong>{ticket.category}</strong>
+          </div>
+          <div className="ticket-summary-card">
+            <span className="ticket-summary-label">Assigned To</span>
+            <strong>{ticket.technician_email || "Unassigned"}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className={`workspace-grid ticket-details-layout ${detailsOpen ? "details-open" : ""}`}>
         <section className="workspace-main">
-          <div className="panel-card">
-            <h3>Conversation</h3>
-            <div className="chat-box">
+          <SectionCard className="panel-card conversation-panel">
+            <div className="conversation-header">
+              <div>
+                <h3>Conversation</h3>
+                <p>
+                  {messages.length === 0
+                    ? "No replies yet. Your next message will start the thread."
+                    : `${messages.length} message${messages.length === 1 ? "" : "s"} in this ticket thread.`}
+                </p>
+              </div>
+              <div className="conversation-header-meta">
+                <span>Created {fmtDate(ticket.created_at)}</span>
+                <span>Updated {fmtDate(ticket.updated_at)}</span>
+              </div>
+              <button
+                type="button"
+                className="details-toggle-btn"
+                onClick={() => setDetailsOpen((open) => !open)}
+              >
+                {detailsOpen ? "Hide ticket details" : "Show ticket details"}
+              </button>
+            </div>
+
+            <div className="chat-box conversation-feed">
               {messages.length === 0 ? (
-                <p>No messages yet.</p>
+                <EmptyState
+                  title="No messages yet"
+                  description="Use the composer below to add an update, ask for help, or attach a file related to this ticket."
+                />
               ) : (
                 messages.map((msg) => {
                   const isMine = msg.sender_email === currentUserEmail;
@@ -201,7 +272,7 @@ function TicketDetails() {
                       >
                         {msg.attachment_name
                           ? `${msg.content || ""}${msg.content ? " | " : ""}${msg.attachment_name}`
-                          : (msg.content || "(empty message)")}
+                          : msg.content || "(empty message)"}
                       </div>
                       <div className="chat-time">{fmtDate(msg.created_at)}</div>
                     </div>
@@ -210,14 +281,14 @@ function TicketDetails() {
               )}
             </div>
 
-            <div className="message-compose">
+            <div className="message-compose compose-dock">
               <textarea
                 className="ticket-input"
                 placeholder="Type your message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={handleMessageKeyDown}
-                rows={3}
+                rows={4}
               />
               <input
                 ref={fileInputRef}
@@ -227,16 +298,9 @@ function TicketDetails() {
               />
 
               <div className="compose-private">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
-                >
+                <div className="compose-actions-row">
                   {canSendPrivateAssist ? (
-                    <label style={{ margin: 0, color: "var(--text)" }}>
+                    <label className="compose-private-toggle">
                       <input
                         type="checkbox"
                         checked={isPrivateMessage}
@@ -245,7 +309,7 @@ function TicketDetails() {
                       Send as private assist message
                     </label>
                   ) : (
-                    <span />
+                    <span className="compose-hint">Messages in this thread are visible on the ticket.</span>
                   )}
 
                   <button
@@ -253,28 +317,13 @@ function TicketDetails() {
                     onClick={openFilePicker}
                     title="Attach file"
                     aria-label="Attach file"
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
-                      background: "var(--card)",
-                      color: "var(--text)",
-                      width: 36,
-                      minWidth: 36,
-                      height: 36,
-                      cursor: "pointer",
-                      fontSize: 18,
-                      lineHeight: 1,
-                    }}
+                    className="compose-attach-btn"
                   >
-                    📎
+                    <span aria-hidden="true">&#128206;</span>
                   </button>
                 </div>
 
-                {selectedFile && (
-                  <span style={{ color: "var(--muted)", fontSize: 13 }}>
-                    {selectedFile.name}
-                  </span>
-                )}
+                {selectedFile && <span className="compose-file-name">{selectedFile.name}</span>}
 
                 {canSendPrivateAssist && isPrivateMessage && (
                   <select
@@ -292,23 +341,31 @@ function TicketDetails() {
                 )}
               </div>
 
-              <button className="ticket-button" onClick={sendMessage}>
-                Send Message
-              </button>
+              <div className="compose-footer">
+                <span className="compose-hint">
+                  Private assist messages stay limited to the selected staff recipient.
+                </span>
+                <button className="ticket-button" onClick={sendMessage}>
+                  Send Message
+                </button>
+              </div>
             </div>
-          </div>
+          </SectionCard>
         </section>
 
-        <aside className="workspace-side">
-          <div className="panel-card">
-            <h3>Ticket Snapshot</h3>
+        <aside className={`workspace-side ticket-details-side ${detailsOpen ? "open" : ""}`}>
+          <SectionCard title="Ticket Snapshot" className="panel-card">
             <div className="snapshot-list">
               <div>
                 <span>Status</span>
                 <strong>{ticket.status}</strong>
               </div>
               <div>
-                <span>Category</span>
+                <span>Team</span>
+                <strong>{ticket.team || "Unassigned"}</strong>
+              </div>
+              <div>
+                <span>Issue Type</span>
                 <strong>{ticket.category}</strong>
               </div>
               <div>
@@ -328,12 +385,43 @@ function TicketDetails() {
                 <strong>{fmtDate(ticket.closed_at)}</strong>
               </div>
             </div>
-          </div>
+          </SectionCard>
 
-          <div className="panel-card">
-            <h3>Activity Timeline</h3>
+          <SectionCard title="Routing and Priority" className="panel-card">
+            {priorityExplanation ? (
+              <div className="snapshot-list">
+                <div>
+                  <span>Current Priority</span>
+                  <strong>{priorityExplanation.currentPriority}</strong>
+                </div>
+                <div>
+                  <span>Base Priority</span>
+                  <strong>{priorityExplanation.basePriority}</strong>
+                </div>
+                <div>
+                  <span>Team Rule</span>
+                  <strong>{priorityExplanation.team}</strong>
+                </div>
+                <div>
+                  <span>Why This Team</span>
+                  <strong>{priorityExplanation.reason}</strong>
+                </div>
+                <div>
+                  <span>Age Escalation</span>
+                  <strong>{priorityExplanation.escalation}</strong>
+                </div>
+              </div>
+            ) : (
+              <p>Explanation unavailable.</p>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Activity Timeline" className="panel-card">
             {timeline.length === 0 ? (
-              <p>No activity yet.</p>
+              <EmptyState
+                title="No activity yet"
+                description="Ticket events and message activity will appear here."
+              />
             ) : (
               <ul className="timeline-list">
                 {timeline.map((item) => (
@@ -345,7 +433,7 @@ function TicketDetails() {
                 ))}
               </ul>
             )}
-          </div>
+          </SectionCard>
         </aside>
       </div>
     </div>

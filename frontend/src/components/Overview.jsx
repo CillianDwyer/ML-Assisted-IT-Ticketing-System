@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
+import EmptyState from "./EmptyState";
+import MetricCard from "./MetricCard";
 import PageHeader from "./PageHeader";
+import SectionCard from "./SectionCard";
 import { derivePriority, getSlaState } from "../utils/ticketVisuals";
 
 function isToday(value) {
@@ -93,7 +96,7 @@ function Overview() {
     const ticketEvents = queueTickets.slice(0, 6).map((t) => ({
       id: `ticket-${t.id}`,
       label: `#${t.id} ${t.title}`,
-      detail: `Status: ${t.status} • Category: ${t.category}`,
+      detail: `Status: ${t.status} | Team: ${t.team || "-"} | Issue Type: ${t.category}`,
       at: t.updated_at || t.created_at,
     }));
 
@@ -114,7 +117,7 @@ function Overview() {
     <div className="ticket-card dashboard-card">
       <PageHeader
         title="Overview"
-        subtitle="Operational snapshot of ticket workload and your current queue."
+        subtitle="Snapshot of ticket activity, queue health, and recent updates."
         action={
           <Link to="/tickets/new" className="page-header-action">
             New Ticket
@@ -144,30 +147,21 @@ function Overview() {
       </div>
 
       <div className="overview-grid">
-        <div className="kpi-card">
-          <div className="overview-label">Open</div>
-          <div className="overview-value">{openCount}</div>
-        </div>
-        <div className="kpi-card">
-          <div className="overview-label">In Progress</div>
-          <div className="overview-value">{inProgressCount}</div>
-        </div>
-        <div className="kpi-card">
-          <div className="overview-label">Closed Today</div>
-          <div className="overview-value">{closedTodayCount}</div>
-        </div>
-        <div className="kpi-card">
-          <div className="overview-label">Avg Resolution (hrs)</div>
-          <div className="overview-value">
-            {avgResolutionHours != null ? avgResolutionHours.toFixed(1) : "-"}
-          </div>
-        </div>
+        <MetricCard label="Open" value={openCount} />
+        <MetricCard label="In Progress" value={inProgressCount} />
+        <MetricCard label="Closed Today" value={closedTodayCount} />
+        <MetricCard
+          label="Avg Resolution (hrs)"
+          value={avgResolutionHours != null ? avgResolutionHours.toFixed(1) : "-"}
+        />
       </div>
 
-      <div className="chart-card" style={{ marginTop: 14 }}>
-        <h3>Recent Activity</h3>
+      <SectionCard title="Recent Activity" className="chart-card">
         {recentActivity.length === 0 ? (
-          <p>No recent activity.</p>
+          <EmptyState
+            title="No recent activity"
+            description="New ticket updates and notifications will appear here."
+          />
         ) : (
           <ul className="activity-list">
             {recentActivity.map((item) => (
@@ -179,7 +173,7 @@ function Overview() {
             ))}
           </ul>
         )}
-      </div>
+      </SectionCard>
     </div>
   );
 }

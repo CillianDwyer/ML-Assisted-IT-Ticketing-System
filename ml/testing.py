@@ -13,7 +13,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import RandomForestClassifier
 
-# 1) Load/clean (same as yours)
+# 1) Load/clean
 df = pd.read_csv("ml/sample_tickets.csv")
 df = df.dropna(subset=["text", "category"])
 df = df[df["text"].str.strip() != ""]
@@ -22,7 +22,7 @@ df["text"] = df["text"].str.lower().str.replace(r"[^a-z0-9\s]", "", regex=True)
 X = df["text"]
 y = df["category"]
 
-# 2) Split (same as yours)
+# 2) Split
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )

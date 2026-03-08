@@ -45,6 +45,7 @@ class Ticket(Base):
     title = Column(String, index=True)
     description = Column(String)
     category = Column(String, default="Uncategorized")
+    team = Column(String, default="Unassigned", nullable=False)
     status = Column(String, default="Open")
     priority = Column(String, default="Low", nullable=False)
 

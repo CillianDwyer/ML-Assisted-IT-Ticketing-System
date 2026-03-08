@@ -47,6 +47,82 @@ SLA_TARGET_HOURS = {
     "High": 24,
     "Critical": 12,
 }
+ISSUE_TYPE_TO_TEAM = {
+    "Password Reset": "Service Desk",
+    "Account Lockout": "Service Desk",
+    "MFA / 2FA Issue": "Service Desk",
+    "Email Access Issue": "Service Desk",
+    "Mailbox / Email Sync Issue": "Service Desk",
+    "Software Installation Request": "Service Desk",
+    "Basic Software Issue": "Service Desk",
+    "Access Request": "Service Desk",
+    "Laptop/Desktop Hardware Issue": "Desktop Support",
+    "OS / Boot Issue": "Desktop Support",
+    "Printer Issue": "Desktop Support",
+    "Peripheral / Docking Issue": "Desktop Support",
+    "Device Performance Issue": "Desktop Support",
+    "Disk Space / Storage Issue": "Desktop Support",
+    "Wi-Fi Connectivity Issue": "Network Team",
+    "VPN Issue": "Network Team",
+    "Network Drive Access Issue": "Network Team",
+    "DNS / Network Resolution Issue": "Network Team",
+    "Network Outage / Connectivity Issue": "Network Team",
+    "Active Directory Issue": "Systems Team",
+    "File Server Issue": "Systems Team",
+    "Server Down / Service Outage": "Systems Team",
+    "Backup / Restore Issue": "Systems Team",
+    "VM / Infrastructure Issue": "Systems Team",
+    "Phishing Report": "Security Team",
+    "Malware / Virus Alert": "Security Team",
+    "Suspicious Login": "Security Team",
+    "Account Compromise": "Security Team",
+    "Security Policy Violation": "Security Team",
+}
+ISSUE_TYPE_BASE_PRIORITY = {
+    "Access Request": "Low",
+    "Account Compromise": "Critical",
+    "Account Lockout": "High",
+    "Active Directory Issue": "High",
+    "Backup / Restore Issue": "Medium",
+    "Basic Software Issue": "Low",
+    "DNS / Network Resolution Issue": "High",
+    "Device Performance Issue": "Low",
+    "Disk Space / Storage Issue": "Medium",
+    "Email Access Issue": "Medium",
+    "File Server Issue": "High",
+    "Laptop/Desktop Hardware Issue": "Medium",
+    "MFA / 2FA Issue": "High",
+    "Mailbox / Email Sync Issue": "Medium",
+    "Malware / Virus Alert": "Critical",
+    "Network Drive Access Issue": "Medium",
+    "Network Outage / Connectivity Issue": "Critical",
+    "OS / Boot Issue": "High",
+    "Password Reset": "Medium",
+    "Peripheral / Docking Issue": "Low",
+    "Phishing Report": "High",
+    "Printer Issue": "Low",
+    "Security Policy Violation": "Medium",
+    "Server Down / Service Outage": "Critical",
+    "Software Installation Request": "Low",
+    "Suspicious Login": "High",
+    "VM / Infrastructure Issue": "High",
+    "VPN Issue": "High",
+    "Wi-Fi Connectivity Issue": "Medium",
+}
+TEAM_BASE_PRIORITY = {
+    "Service Desk": "Medium",
+    "Desktop Support": "Medium",
+    "Network Team": "High",
+    "Systems Team": "High",
+    "Security Team": "High",
+}
+
+
+def resolve_ticket_team(category: str | None) -> str | None:
+    normalized_category = (category or "").strip()
+    if not normalized_category:
+        return None
+    return ISSUE_TYPE_TO_TEAM.get(normalized_category, normalized_category)
 
 
 def ensure_ticket_message_columns():
@@ -131,14 +207,9 @@ def compute_ticket_priority(
         age_hours = (datetime.utcnow() - created_dt).total_seconds() / 3600.0
 
     normalized_category = (category or "").strip()
-
-    # Base priority from category.
-    if normalized_category in {"Network", "Access"}:
-        priority = "High"
-    elif normalized_category in {"Hardware", "Password Reset"}:
-        priority = "Medium"
-    else:
-        priority = "Low"
+    priority = ISSUE_TYPE_BASE_PRIORITY.get(normalized_category)
+    if priority is None:
+        priority = TEAM_BASE_PRIORITY.get(resolve_ticket_team(category), "Low")
 
     # Age-based escalation.
     if age_hours >= PRIORITY_THRESHOLDS_HOURS["low"]:
@@ -179,6 +250,32 @@ def ensure_ticket_priority_column():
         db.commit()
     finally:
         db.close()
+
+
+def ensure_ticket_team_column():
+    db = database.SessionLocal()
+    try:
+        cols = db.execute(text("PRAGMA table_info(tickets)")).fetchall()
+        col_names = {c[1] for c in cols}
+
+        if "team" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE tickets "
+                    "ADD COLUMN team VARCHAR NOT NULL DEFAULT 'Unassigned'"
+                )
+            )
+            db.commit()
+
+        tickets = db.query(models.Ticket).all()
+        for ticket in tickets:
+            ticket.team = resolve_ticket_team(ticket.category) or "Unassigned"
+        db.commit()
+    finally:
+        db.close()
+
+
+ensure_ticket_team_column()
 
 
 ensure_ticket_priority_column()
@@ -250,15 +347,20 @@ def seed_default_users():
         db.add(admin_user)
 
     technicians = [
-        ("hardware@example.com", "Hardware"),
-        ("passwordrest@example.com", "Password Reset"),
-        ("software@example.com", "Software"),
-        ("access@example.com", "Access"),
-        ("network@example.com", "Network"),
+        ("servicedesk@example.com", "Service Desk"),
+        ("desktopsupport@example.com", "Desktop Support"),
+        ("networkteam@example.com", "Network Team"),
+        ("systemsteam@example.com", "Systems Team"),
+        ("securityteam@example.com", "Security Team"),
     ]
 
     for email, speciality in technicians:
-        if not db.query(models.User).filter(models.User.email == email).first():
+        existing = db.query(models.User).filter(models.User.email == email).first()
+        if existing:
+            existing.role = "technician"
+            existing.speciality = speciality
+            continue
+        if not existing:
             tech = models.User(
                 email=email,
                 hashed_password=auth.get_password_hash("tech123"),
@@ -271,6 +373,56 @@ def seed_default_users():
     db.close()
 
 seed_default_users()
+
+
+def cleanup_legacy_technician_accounts():
+    db = database.SessionLocal()
+    try:
+        legacy_mapping = {
+            "hardware@example.com": "desktopsupport@example.com",
+            "passwordrest@example.com": "servicedesk@example.com",
+            "software@example.com": "servicedesk@example.com",
+            "access@example.com": "systemsteam@example.com",
+            "network@example.com": "networkteam@example.com",
+        }
+        changed = False
+        for legacy_email, canonical_email in legacy_mapping.items():
+            legacy_user = db.query(models.User).filter(models.User.email == legacy_email).first()
+            canonical_user = db.query(models.User).filter(models.User.email == canonical_email).first()
+            if not legacy_user:
+                continue
+            if canonical_user is None:
+                continue
+
+            if legacy_user.id == canonical_user.id:
+                continue
+
+            (
+                db.query(models.Ticket)
+                .filter(models.Ticket.technician_id == legacy_user.id)
+                .update({"technician_id": canonical_user.id}, synchronize_session=False)
+            )
+            (
+                db.query(models.Notification)
+                .filter(models.Notification.user_id == legacy_user.id)
+                .update({"user_id": canonical_user.id}, synchronize_session=False)
+            )
+            (
+                db.query(models.TicketMessage)
+                .filter(models.TicketMessage.recipient_id == legacy_user.id)
+                .update({"recipient_id": canonical_user.id}, synchronize_session=False)
+            )
+
+            db.delete(legacy_user)
+            changed = True
+
+        if changed:
+            db.commit()
+    finally:
+        db.close()
+
+
+cleanup_legacy_technician_accounts()
 
 # ---------------------------
 # Helpers: Notifications
@@ -492,6 +644,13 @@ def admin_stats(
     )
     by_category = {cat: count for cat, count in category_rows}
 
+    team_rows = (
+        db.query(models.Ticket.team, func.count(models.Ticket.id))
+        .group_by(models.Ticket.team)
+        .all()
+    )
+    by_team = {team: count for team, count in team_rows}
+
     tech_rows = (
         db.query(models.User.email, func.count(models.Ticket.id))
         .join(models.Ticket, models.Ticket.technician_id == models.User.id, isouter=True)
@@ -526,6 +685,7 @@ def admin_stats(
         "tickets_per_day": tickets_per_day,
         "by_status": by_status,
         "by_category": by_category,
+        "by_team": by_team,
         "by_technician": by_technician,
         "oldest_open": oldest_open_simple,
     }
@@ -627,11 +787,12 @@ def create_ticket(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     predicted_category = predict_category(ticket.description)
+    predicted_team = resolve_ticket_team(predicted_category)
     now = datetime.utcnow()
 
     technician = (
         db.query(models.User)
-        .filter(models.User.role == "technician", models.User.speciality == predicted_category)
+        .filter(models.User.role == "technician", models.User.speciality == predicted_team)
         .first()
     )
 
@@ -639,6 +800,7 @@ def create_ticket(
         title=ticket.title,
         description=ticket.description,
         category=predicted_category,
+        team=predicted_team or "Unassigned",
         status="Open",
         priority=compute_ticket_priority(
             status="Open",
@@ -786,15 +948,17 @@ def update_ticket_category(
     if current_user.role not in ["technician", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    mapped_team = resolve_ticket_team(category)
     technician = (
         db.query(models.User)
-        .filter(models.User.role == "technician", models.User.speciality == category)
+        .filter(models.User.role == "technician", models.User.speciality == mapped_team)
         .first()
     )
 
     previous_technician_id = ticket.technician_id
 
     ticket.category = category
+    ticket.team = mapped_team or "Unassigned"
     ticket.technician_id = technician.id if technician else None
     ticket.updated_at = datetime.utcnow()
 

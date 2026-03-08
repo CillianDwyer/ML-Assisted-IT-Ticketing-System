@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import EmptyState from "./EmptyState";
+import FilterBar from "./FilterBar";
+import MetricCard from "./MetricCard";
 import PageHeader from "./PageHeader";
+import SectionCard from "./SectionCard";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -14,7 +18,10 @@ import {
 import { Bar, Doughnut } from "react-chartjs-2";
 import {
   derivePriority,
+  getIssueTypesForTeam,
+  getTicketTeam,
   getSlaState,
+  TEAM_NAMES,
   priorityClass,
   slaClass,
 } from "../utils/ticketVisuals";
@@ -28,7 +35,6 @@ ChartJS.register(
   Legend
 );
 
-const CATEGORIES = ["Hardware", "Software", "Network", "Access", "Password Reset"];
 const STATUSES = ["All", "Open", "In Progress", "Closed"];
 const PRIORITY_TARGET_HOURS = {
   Low: 72,
@@ -55,6 +61,8 @@ function getHoursSince(value) {
 function TechDashboard() {
   const [tickets, setTickets] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [teamFilter, setTeamFilter] = useState("All");
+  const [teamSelections, setTeamSelections] = useState({});
   const [themeTick, setThemeTick] = useState(0);
   const navigate = useNavigate();
 
@@ -90,15 +98,25 @@ function TechDashboard() {
   const handleCategoryChange = async (ticketId, newCategory) => {
     try {
       await api.put(`/tickets/${ticketId}/category`, { category: newCategory });
+      setTeamSelections((prev) => {
+        const next = { ...prev };
+        delete next[ticketId];
+        return next;
+      });
       fetchTickets();
     } catch (error) {
       console.error("Error updating category:", error);
     }
   };
 
+  const setSelectedTeamForTicket = (ticketId, team) => {
+    setTeamSelections((prev) => ({ ...prev, [ticketId]: team }));
+  };
+
   const filteredTickets = tickets.filter((ticket) => {
-    if (filter === "All") return true;
-    return ticket.status === filter;
+    const matchesStatus = filter === "All" || ticket.status === filter;
+    const matchesTeam = teamFilter === "All" || getTicketTeam(ticket) === teamFilter;
+    return matchesStatus && matchesTeam;
   });
 
   const triageSource = filteredTickets;
@@ -235,23 +253,50 @@ function TechDashboard() {
     <div className="ticket-card dashboard-card">
       <PageHeader
         title="Technician Queue"
-        subtitle="Work assigned tickets from a single operational queue."
+        subtitle="Work assigned tickets, update progress, and keep queue health in view."
       />
 
-      <div className="ticket-filters">
-        {STATUSES.map((status) => (
-          <button
-            key={status}
-            className={`filter-btn ${filter === status ? "active" : ""}`}
-            onClick={() => setFilter(status)}
-          >
-            {status}
-          </button>
-        ))}
+      <div className="overview-grid" style={{ marginBottom: 14 }}>
+        <MetricCard label="On Track" value={slaSummary.on_track} />
+        <MetricCard label="At Risk" value={slaSummary.at_risk} />
+        <MetricCard label="Breached" value={slaSummary.breached} />
+        <MetricCard label="Due Soon" value={dueSoon.length} />
       </div>
 
+      <FilterBar>
+        <div className="ticket-filters">
+          {STATUSES.map((status) => (
+            <button
+              key={status}
+              className={`filter-btn ${filter === status ? "active" : ""}`}
+              onClick={() => setFilter(status)}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ maxWidth: 260, width: "100%" }}>
+          <select
+            className="ticket-input"
+            value={teamFilter}
+            onChange={(e) => setTeamFilter(e.target.value)}
+          >
+            <option value="All">All teams</option>
+            {TEAM_NAMES.map((team) => (
+              <option key={team} value={team}>
+                {team}
+              </option>
+            ))}
+          </select>
+        </div>
+      </FilterBar>
+
       {filteredTickets.length === 0 ? (
-        <p>No tickets found.</p>
+        <EmptyState
+          title="No assigned tickets match the current filters"
+          description="Try a different status or team filter to widen the queue."
+        />
       ) : (
         <>
           <div className="table-wrap">
@@ -264,83 +309,108 @@ function TechDashboard() {
                   <th>Priority</th>
                   <th>SLA</th>
                   <th>Status</th>
-                  <th>Category</th>
+                  <th>Team</th>
+                  <th>Issue Type</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTickets.map((ticket) => (
-                  <tr
-                    key={ticket.id}
-                    className="clickable"
-                    onClick={() => navigate(`/tickets/${ticket.id}`)}
-                    title="Open ticket"
-                  >
-                    <td>#{ticket.id}</td>
-                    <td className="cell-title">{ticket.title}</td>
-                    <td className="cell-email" title={ticket.user_email || ""}>
-                      {ticket.user_email || "Unknown"}
-                    </td>
-                    <td>
-                      <span className={priorityClass(derivePriority(ticket))}>
-                        {derivePriority(ticket)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={slaClass(getSlaState(ticket).level)}>
-                        {getSlaState(ticket).label}
-                      </span>
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <select
-                        className="ticket-input"
-                        value={ticket.status || "Open"}
-                        onChange={(e) => handleStatusChange(ticket.id, e.target.value)}
+                  (() => {
+                    const selectedTeam = teamSelections[ticket.id] || getTicketTeam(ticket);
+                    const rowCategoryOptions = getIssueTypesForTeam(selectedTeam);
+                    const categoryValue = rowCategoryOptions.includes(ticket.category)
+                      ? ticket.category
+                      : "";
+
+                    return (
+                      <tr
+                        key={ticket.id}
+                        className="clickable"
+                        onClick={() => navigate(`/tickets/${ticket.id}`)}
+                        title="Open ticket"
                       >
-                        {STATUSES.filter((s) => s !== "All").map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <select
-                        className="ticket-input"
-                        value={ticket.category || "Hardware"}
-                        onChange={(e) => handleCategoryChange(ticket.id, e.target.value)}
-                      >
-                        {CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
+                        <td>#{ticket.id}</td>
+                        <td className="cell-title">{ticket.title}</td>
+                        <td className="cell-email" title={ticket.user_email || ""}>
+                          {ticket.user_email || "Unknown"}
+                        </td>
+                        <td>
+                          <span className={priorityClass(derivePriority(ticket))}>
+                            {derivePriority(ticket)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={slaClass(getSlaState(ticket).level)}>
+                            {getSlaState(ticket).label}
+                          </span>
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <select
+                            className="ticket-input"
+                            value={ticket.status || "Open"}
+                            onChange={(e) => handleStatusChange(ticket.id, e.target.value)}
+                          >
+                            {STATUSES.filter((s) => s !== "All").map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <select
+                            className="ticket-input"
+                            value={selectedTeam}
+                            onChange={(e) => setSelectedTeamForTicket(ticket.id, e.target.value)}
+                          >
+                            {TEAM_NAMES.map((team) => (
+                              <option key={team} value={team}>
+                                {team}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <select
+                            className="ticket-input"
+                            value={categoryValue}
+                            onChange={(e) => handleCategoryChange(ticket.id, e.target.value)}
+                          >
+                            <option value="">Select issue type</option>
+                            {rowCategoryOptions.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })()
                 ))}
               </tbody>
             </table>
           </div>
 
           <div className="charts-grid">
-            <div className="chart-card">
-              <h3>Queue Status</h3>
+            <SectionCard title="Queue Status" className="chart-card">
               <div className="chart-wrap">
                 <Doughnut data={doughnutData} options={doughnutOptions} />
               </div>
-            </div>
+            </SectionCard>
 
-            <div className="chart-card">
-              <h3>Priority Distribution</h3>
+            <SectionCard title="Priority Distribution" className="chart-card">
               <div className="chart-wrap">
                 <Bar data={priorityBarData} options={barOptions} />
               </div>
-            </div>
+            </SectionCard>
 
-            <div className="chart-card">
-              <h3>Due Soon (Next 24h)</h3>
+            <SectionCard title="Due Soon (Next 24h)" className="chart-card">
               {dueSoon.length === 0 ? (
-                <p>No tickets are due to breach in the next 24 hours.</p>
+                <EmptyState
+                  title="No tickets due soon"
+                  description="Nothing in this queue is set to breach within the next 24 hours."
+                />
               ) : (
                 <ul className="oldest-list">
                   {dueSoon.map(({ ticket, priority, hoursToBreach }) => (
@@ -359,7 +429,7 @@ function TechDashboard() {
                   ))}
                 </ul>
               )}
-            </div>
+            </SectionCard>
           </div>
         </>
       )}

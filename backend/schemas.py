@@ -37,6 +37,7 @@ class TicketResponse(BaseModel):
     title: str
     description: str
     category: str
+    team: str
     status: str
     priority: str
     sla_state: str
