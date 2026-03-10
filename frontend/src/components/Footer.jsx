@@ -18,7 +18,7 @@ function Footer() {
           <div className="footer-col">
             <div className="footer-title">Navigation</div>
             <NavLink to="/about" className="footer-link">About</NavLink>
-            <NavLink to="/" className="footer-link">Submit Ticket</NavLink>
+            <NavLink to="/tickets/new" className="footer-link">Submit Ticket</NavLink>
             <NavLink to="/mytickets" className="footer-link">My Tickets</NavLink>
           </div>
 

@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import api from "../api";
 import logo from "../assets/logo1.png";
+import { PREFERENCE_KEYS, getPreference, setThemePreference } from "../utils/preferences";
 
 function BellIcon() {
   return (
@@ -52,6 +53,33 @@ function MenuIcon() {
   );
 }
 
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="nav-icon">
+      <path
+        d="M10.9 2.8h2.2l.5 2a7.8 7.8 0 0 1 1.9.8l1.8-1 1.6 1.6-1 1.8c.33.6.6 1.23.8 1.9l2 .5v2.2l-2 .5a7.8 7.8 0 0 1-.8 1.9l1 1.8-1.6 1.6-1.8-1a7.8 7.8 0 0 1-1.9.8l-.5 2h-2.2l-.5-2a7.8 7.8 0 0 1-1.9-.8l-1.8 1-1.6-1.6 1-1.8a7.8 7.8 0 0 1-.8-1.9l-2-.5v-2.2l2-.5a7.8 7.8 0 0 1 .8-1.9l-1-1.8 1.6-1.6 1.8 1a7.8 7.8 0 0 1 1.9-.8l.5-2Z"
+        fill="currentColor"
+      />
+      <circle cx="12" cy="12" r="3.1" fill="var(--card)" />
+    </svg>
+  );
+}
+
+const NOTIF_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "unread", label: "Unread" },
+  { id: "message", label: "Messages" },
+  { id: "assignment", label: "Assignments" },
+  { id: "status", label: "Status" },
+];
+
+function getNotificationLabel(type) {
+  if (type === "message") return "Message";
+  if (type === "assignment") return "Assignment";
+  if (type === "status") return "Status";
+  return "Update";
+}
+
 function Navbar() {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
@@ -68,15 +96,10 @@ function Navbar() {
   const [notifCount, setNotifCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [notifFilter, setNotifFilter] = useState("all");
   const notifRef = useRef(null);
 
-  const [darkMode, setDarkMode] = useState(localStorage.getItem("theme") === "dark");
-
-  useEffect(() => {
-    if (localStorage.getItem("theme") === "dark") {
-      document.body.classList.add("dark");
-    }
-  }, []);
+  const [darkMode, setDarkMode] = useState(getPreference(PREFERENCE_KEYS.theme, "light") === "dark");
 
   const roleLabel =
     role === "admin" ? "Admin" : role === "technician" ? "Technician" : "User";
@@ -146,6 +169,12 @@ function Navbar() {
     if (notifOpen) fetchNotifications();
   }, [notifOpen]);
 
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === "all") return notifications;
+    if (notifFilter === "unread") return notifications.filter((n) => !n.is_read);
+    return notifications.filter((n) => n.type === notifFilter);
+  }, [notifications, notifFilter]);
+
   useEffect(() => {
     const onClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -172,17 +201,23 @@ function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    const onPreferenceChange = (event) => {
+      if (event.detail?.key === PREFERENCE_KEYS.theme) {
+        setDarkMode(event.detail.value === "dark");
+      }
+    };
+
+    window.addEventListener("app:preferences-changed", onPreferenceChange);
+    return () => {
+      window.removeEventListener("app:preferences-changed", onPreferenceChange);
+    };
+  }, []);
+
   const toggleDarkMode = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
-
-    if (newMode) {
-      document.body.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.body.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
+    setThemePreference(newMode ? "dark" : "light");
   };
 
   const handleLogout = () => {
@@ -237,7 +272,7 @@ function Navbar() {
                   <>
                     <li>
                       <NavLink
-                        to="/"
+                        to="/overview"
                         className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
                         onClick={closeMenus}
                       >
@@ -354,18 +389,49 @@ function Navbar() {
                       </button>
                     </div>
 
+                    <div className="notif-filter-bar">
+                      {NOTIF_FILTERS.map((filter) => (
+                        <button
+                          key={filter.id}
+                          type="button"
+                          className={`notif-filter-chip ${notifFilter === filter.id ? "active" : ""}`}
+                          onClick={() => setNotifFilter(filter.id)}
+                        >
+                          {filter.label}
+                        </button>
+                      ))}
+                    </div>
+
                     <div className="notif-list">
                       {notifLoading ? (
-                        <div className="notif-empty">Loading...</div>
-                      ) : notifications.length === 0 ? (
-                        <div className="notif-empty">No notifications yet.</div>
+                        <div className="notif-empty">
+                          <strong>Loading notifications</strong>
+                          <span>Pulling the latest updates from your workspace.</span>
+                        </div>
+                      ) : filteredNotifications.length === 0 ? (
+                        <div className="notif-empty">
+                          <strong>
+                            {notifFilter === "all" ? "No notifications yet" : "Nothing in this view"}
+                          </strong>
+                          <span>
+                            {notifFilter === "all"
+                              ? "Assignments, messages, and status changes will appear here."
+                              : "Try a different filter to widen the notification view."}
+                          </span>
+                        </div>
                       ) : (
-                        notifications.map((n) => (
+                        filteredNotifications.map((n) => (
                           <button
                             key={n.id}
                             className={`notif-item ${n.is_read ? "" : "unread"}`}
                             onClick={() => openNotification(n)}
                           >
+                            <div className="notif-item-head">
+                              <span className={`notif-type-pill ${n.type || "update"}`}>
+                                {getNotificationLabel(n.type)}
+                              </span>
+                              {!n.is_read && <span className="notif-item-dot" aria-hidden="true" />}
+                            </div>
                             <div className="notif-text">{n.content}</div>
                             <div className="notif-time">
                               {new Date(n.created_at).toLocaleString()}
@@ -400,6 +466,15 @@ function Navbar() {
                       <div className="user-dropdown-role">{roleLabel}</div>
                     </div>
                     <div className="user-dropdown-divider" />
+                    <button
+                      className="user-dropdown-item"
+                      onClick={() => {
+                        closeMenus();
+                        navigate("/settings");
+                      }}
+                    >
+                      <GearIcon /> Settings
+                    </button>
                     <button className="user-dropdown-item" onClick={toggleDarkMode}>
                       {darkMode ? (
                         <>
@@ -431,13 +506,17 @@ function Navbar() {
       {showConfirm && (
         <div className="logout-overlay">
           <div className="logout-popup">
-            <h3>Are you sure you want to logout?</h3>
+            <div className="logout-popup-eyebrow">Sign out</div>
+            <h3>Sign out of your workspace?</h3>
+            <p className="logout-popup-copy">
+              You will return to the login screen and need to sign in again to access tickets, notifications, and dashboards.
+            </p>
             <div className="logout-buttons">
-              <button className="yes-btn" onClick={handleLogout}>
-                Yes
-              </button>
               <button className="no-btn" onClick={() => setShowConfirm(false)}>
-                No
+                Cancel
+              </button>
+              <button className="yes-btn" onClick={handleLogout}>
+                Sign out
               </button>
             </div>
           </div>

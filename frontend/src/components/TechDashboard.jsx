@@ -21,7 +21,6 @@ import {
   getIssueTypesForTeam,
   getTicketTeam,
   getSlaState,
-  TEAM_NAMES,
   priorityClass,
   slaClass,
 } from "../utils/ticketVisuals";
@@ -61,7 +60,6 @@ function getHoursSince(value) {
 function TechDashboard() {
   const [tickets, setTickets] = useState([]);
   const [filter, setFilter] = useState("All");
-  const [teamFilter, setTeamFilter] = useState("All");
   const [teamSelections, setTeamSelections] = useState({});
   const [themeTick, setThemeTick] = useState(0);
   const navigate = useNavigate();
@@ -115,8 +113,7 @@ function TechDashboard() {
 
   const filteredTickets = tickets.filter((ticket) => {
     const matchesStatus = filter === "All" || ticket.status === filter;
-    const matchesTeam = teamFilter === "All" || getTicketTeam(ticket) === teamFilter;
-    return matchesStatus && matchesTeam;
+    return matchesStatus;
   });
 
   const triageSource = filteredTickets;
@@ -256,13 +253,6 @@ function TechDashboard() {
         subtitle="Work assigned tickets, update progress, and keep queue health in view."
       />
 
-      <div className="overview-grid" style={{ marginBottom: 14 }}>
-        <MetricCard label="On Track" value={slaSummary.on_track} />
-        <MetricCard label="At Risk" value={slaSummary.at_risk} />
-        <MetricCard label="Breached" value={slaSummary.breached} />
-        <MetricCard label="Due Soon" value={dueSoon.length} />
-      </div>
-
       <FilterBar>
         <div className="ticket-filters">
           {STATUSES.map((status) => (
@@ -275,27 +265,12 @@ function TechDashboard() {
             </button>
           ))}
         </div>
-
-        <div style={{ maxWidth: 260, width: "100%" }}>
-          <select
-            className="ticket-input"
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-          >
-            <option value="All">All teams</option>
-            {TEAM_NAMES.map((team) => (
-              <option key={team} value={team}>
-                {team}
-              </option>
-            ))}
-          </select>
-        </div>
       </FilterBar>
 
       {filteredTickets.length === 0 ? (
         <EmptyState
           title="No assigned tickets match the current filters"
-          description="Try a different status or team filter to widen the queue."
+          description="Try a different status filter to widen the queue."
         />
       ) : (
         <>
@@ -363,7 +338,7 @@ function TechDashboard() {
                             value={selectedTeam}
                             onChange={(e) => setSelectedTeamForTicket(ticket.id, e.target.value)}
                           >
-                            {TEAM_NAMES.map((team) => (
+                            {["Service Desk", "Desktop Support", "Network Team", "Systems Team", "Security Team"].map((team) => (
                               <option key={team} value={team}>
                                 {team}
                               </option>
@@ -430,6 +405,13 @@ function TechDashboard() {
                 </ul>
               )}
             </SectionCard>
+          </div>
+
+          <div className="overview-grid" style={{ marginTop: 14 }}>
+            <MetricCard label="On Track" value={slaSummary.on_track} />
+            <MetricCard label="At Risk" value={slaSummary.at_risk} />
+            <MetricCard label="Breached" value={slaSummary.breached} />
+            <MetricCard label="Due Soon" value={dueSoon.length} />
           </div>
         </>
       )}

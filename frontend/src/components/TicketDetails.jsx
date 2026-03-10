@@ -228,6 +228,8 @@ function TicketDetails() {
                 type="button"
                 className="details-toggle-btn"
                 onClick={() => setDetailsOpen((open) => !open)}
+                aria-expanded={detailsOpen}
+                aria-controls="ticket-details-panel"
               >
                 {detailsOpen ? "Hide ticket details" : "Show ticket details"}
               </button>
@@ -353,7 +355,10 @@ function TicketDetails() {
           </SectionCard>
         </section>
 
-        <aside className={`workspace-side ticket-details-side ${detailsOpen ? "open" : ""}`}>
+        <aside
+          id="ticket-details-panel"
+          className={`workspace-side ticket-details-side ${detailsOpen ? "open" : ""}`}
+        >
           <SectionCard title="Ticket Snapshot" className="panel-card">
             <div className="snapshot-list">
               <div>

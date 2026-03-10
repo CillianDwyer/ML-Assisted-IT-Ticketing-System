@@ -2,6 +2,12 @@ import React, { useState } from "react";
 import api from "../api";
 import { Link, useNavigate } from "react-router-dom";
 
+const ROLE_ITEMS = [
+  { label: "Users", detail: "Submit incidents, track replies, and keep one ticket thread per issue." },
+  { label: "Technicians", detail: "Work assigned queues, send assist messages, and keep SLA risk visible." },
+  { label: "Admins", detail: "Review workload, reroute issues, and monitor operations in one place." },
+];
+
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,50 +53,93 @@ function Login() {
   };
 
   return (
-    <div className="ticket-card auth-card">
-      <section className="auth-panel auth-form-panel">
-        <h2>Login</h2>
-        <p className="auth-sub">Access your support workspace.</p>
+    <div className="ticket-card auth-card auth-hero-card">
+      <div className="auth-grid">
+        <section className="auth-panel auth-hero-panel">
+          <div className="auth-eyebrow">Support Workspace</div>
+          <h1 className="auth-title">Keep requests, ownership, and resolution in one place.</h1>
+          <p className="auth-sub auth-sub-hero">
+            Sign in to route tickets faster, work the queue cleanly, and keep every update attached to the ticket thread.
+          </p>
 
-        <form className="ticket-form" onSubmit={handleSubmit}>
-          <input
-            className="ticket-input"
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-
-          <div className="auth-password-row">
-            <input
-              className="ticket-input"
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button
-              type="button"
-              className="auth-toggle"
-              onClick={() => setShowPassword((v) => !v)}
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
+          <div className="auth-stat-strip">
+            <div className="auth-stat-card">
+              <span>Roles</span>
+              <strong>3 workspaces</strong>
+            </div>
+            <div className="auth-stat-card">
+              <span>Threaded support</span>
+              <strong>One ticket, one history</strong>
+            </div>
           </div>
 
-          <button className="ticket-button" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Signing in..." : "Login"}
-          </button>
-        </form>
+          <div className="auth-feature-list">
+            {ROLE_ITEMS.map((item) => (
+              <div key={item.label} className="auth-feature-item">
+                <strong>{item.label}</strong>
+                <p>{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-        {error && <p className="ticket-message error">{error}</p>}
+        <section className="auth-panel auth-form-panel">
+          <div className="auth-form-topline">
+            <div className="auth-eyebrow">Login</div>
+            <h2>Access your support workspace</h2>
+            <p className="auth-sub">Use your assigned account to continue where your queue left off.</p>
+          </div>
 
-        <p className="auth-link-line">
-          No account? <Link to="/register">Register</Link>
-        </p>
-      </section>
+          <form className="ticket-form" onSubmit={handleSubmit}>
+            <label className="auth-field">
+              <span className="auth-label">Email</span>
+              <input
+                className="ticket-input"
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </label>
+
+            <label className="auth-field">
+              <span className="auth-label">Password</span>
+              <div className="auth-password-row">
+                <input
+                  className="ticket-input"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-toggle"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </label>
+
+            <button className="ticket-button auth-submit-btn" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+
+          {error && <p className="ticket-message error auth-message">{error}</p>}
+
+          <div className="auth-note">
+            Demo staff accounts are seeded by the backend. Regular end users can create their own support account.
+          </div>
+
+          <p className="auth-link-line">
+            No account? <Link to="/register">Create one</Link>
+          </p>
+        </section>
+      </div>
     </div>
   );
 }
