@@ -45,7 +45,7 @@ function Register() {
           <div className="auth-eyebrow">Create Access</div>
           <h1 className="auth-title">Start with a cleaner request workflow from day one.</h1>
           <p className="auth-sub auth-sub-hero">
-            Register a requester account to submit incidents, follow every update, and keep support communication attached to the ticket.
+            Register a requester account to submit incidents, follow every update, and keep support communication in one place.
           </p>
 
           <div className="auth-feature-list">
@@ -61,7 +61,7 @@ function Register() {
         <section className="auth-panel auth-form-panel">
           <div className="auth-form-topline">
             <div className="auth-eyebrow">Register</div>
-            <h2>Create a requester account</h2>
+            <h2>Create an account here</h2>
             <p className="auth-sub">This account is for submitting and following support tickets.</p>
           </div>
 

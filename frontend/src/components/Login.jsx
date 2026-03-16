@@ -86,8 +86,8 @@ function Login() {
         <section className="auth-panel auth-form-panel">
           <div className="auth-form-topline">
             <div className="auth-eyebrow">Login</div>
-            <h2>Access your support workspace</h2>
-            <p className="auth-sub">Use your assigned account to continue where your queue left off.</p>
+            <h2>Sign in to access your account</h2>
+            <p className="auth-sub">Use your assigned account details.</p>
           </div>
 
           <form className="ticket-form" onSubmit={handleSubmit}>

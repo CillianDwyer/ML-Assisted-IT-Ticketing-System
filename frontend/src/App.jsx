@@ -16,6 +16,7 @@ import TechDashboard from "./components/TechDashboard";
 import TicketDetails from "./components/TicketDetails";
 import Overview from "./components/Overview";
 import Settings from "./components/Settings";
+import ModelDetails from "./components/ModelDetails";
 import { getPreferredHomeRoute, initializeStoredPreferences } from "./utils/preferences";
 import "./App.css";
 
@@ -119,6 +120,15 @@ function AppRoutes() {
             <PrivateRoute>
               <Settings />
             </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/settings/model-details"
+          element={
+            <RoleRoute allowedRoles={["admin"]}>
+              <ModelDetails />
+            </RoleRoute>
           }
         />
       </Routes>

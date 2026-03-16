@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import PageHeader from "./PageHeader";
 import SectionCard from "./SectionCard";
 import {
@@ -168,6 +169,25 @@ function Settings() {
           </div>
         </SectionCard>
       </div>
+
+      {role === "admin" ? (
+        <SectionCard title="Admin tools" className="settings-card">
+          <div className="settings-option">
+            <div className="settings-option-copy">
+              <h4>ML model details</h4>
+              <p>
+                Open a hidden admin-only reference page showing the tested classifiers,
+                the deployed model choice, and the main benefits and tradeoffs.
+              </p>
+            </div>
+            <div className="settings-admin-actions">
+              <Link to="/settings/model-details" className="page-header-action">
+                View ML model details
+              </Link>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
     </div>
   );
 }

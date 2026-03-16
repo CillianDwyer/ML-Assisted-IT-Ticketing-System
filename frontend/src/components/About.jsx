@@ -141,25 +141,24 @@ function About() {
           </p>
 
           <div className="home-badges">
-            <div className="home-badge">
-              System status: <StatusPill status={health.status} detail={health.detail} />
+            <div className="home-badge about-status-badge">
+              <span>System status:</span>
+              <StatusPill status={health.status} detail={health.detail} />
+              <button
+                className="about-refresh-btn"
+                onClick={() => {
+                  fetchHealth();
+                  fetchPublicMetrics();
+                  fetchMyTicketsIfLoggedIn();
+                }}
+                type="button"
+                title="Refresh live stats"
+                aria-label="Refresh live stats"
+              >
+                ↻
+              </button>
             </div>
             <div className="home-badge">Issue type prediction | team routing | technician queue</div>
-          </div>
-
-          <div className="about-hero-actions">
-            <button
-              className="home-refresh"
-              onClick={() => {
-                fetchHealth();
-                fetchPublicMetrics();
-                fetchMyTicketsIfLoggedIn();
-              }}
-              type="button"
-              title="Refresh status"
-            >
-              Refresh live stats
-            </button>
           </div>
 
           {health.checkedAt && (
