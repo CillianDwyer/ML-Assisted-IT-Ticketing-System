@@ -7,6 +7,7 @@ const PRIORITY_THRESHOLDS = {
   critical: 12,
 };
 const PRIORITY_ORDER = ["Low", "Medium", "High", "Critical"];
+export const ADMIN_REVIEW_QUEUE = "Admin Review Queue";
 export const ISSUE_TYPES = [
   "Access Request",
   "Account Compromise",
@@ -101,6 +102,7 @@ const ISSUE_TYPE_BASE_PRIORITY = {
   "Wi-Fi Connectivity Issue": "Medium",
 };
 const TEAM_BASE_PRIORITY = {
+  [ADMIN_REVIEW_QUEUE]: "Medium",
   "Service Desk": "Medium",
   "Desktop Support": "Medium",
   "Network Team": "High",
@@ -118,6 +120,7 @@ export function getTicketTeam(ticket) {
   if (persistedTeam) return persistedTeam;
 
   const category = String(ticket?.category || "").trim();
+  if (category.toLowerCase() === "uncategorized") return ADMIN_REVIEW_QUEUE;
   return ISSUE_TYPE_TO_TEAM[category] || "Unassigned";
 }
 

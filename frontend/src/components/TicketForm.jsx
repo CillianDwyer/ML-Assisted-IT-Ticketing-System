@@ -84,7 +84,9 @@ function TicketForm() {
             <strong>What happens next</strong>
             <p>
               After submission, the backend predicts an issue type, maps it to a
-              support team, calculates priority, and opens the ticket thread.
+              support team, calculates priority, and opens the ticket thread. If
+              the description is too vague, the ticket can stay uncategorized for
+              manual review instead of being routed badly.
             </p>
           </div>
         </SectionCard>

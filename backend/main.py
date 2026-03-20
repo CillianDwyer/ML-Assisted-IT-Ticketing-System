@@ -47,6 +47,7 @@ SLA_TARGET_HOURS = {
     "High": 24,
     "Critical": 12,
 }
+ADMIN_REVIEW_QUEUE = "Admin Review Queue"
 ISSUE_TYPE_TO_TEAM = {
     "Password Reset": "Service Desk",
     "Account Lockout": "Service Desk",
@@ -110,6 +111,7 @@ ISSUE_TYPE_BASE_PRIORITY = {
     "Wi-Fi Connectivity Issue": "Medium",
 }
 TEAM_BASE_PRIORITY = {
+    ADMIN_REVIEW_QUEUE: "Medium",
     "Service Desk": "Medium",
     "Desktop Support": "Medium",
     "Network Team": "High",
@@ -122,6 +124,8 @@ def resolve_ticket_team(category: str | None) -> str | None:
     normalized_category = (category or "").strip()
     if not normalized_category:
         return None
+    if normalized_category.lower() == "uncategorized":
+        return ADMIN_REVIEW_QUEUE
     return ISSUE_TYPE_TO_TEAM.get(normalized_category, normalized_category)
 
 
@@ -443,6 +447,26 @@ def create_notification(
     )
     db.add(notif)
     return notif
+
+
+def notify_admins_about_unassigned_ticket(db: Session, ticket: models.Ticket):
+    admin_ids = [
+        user_id
+        for (user_id,) in (
+            db.query(models.User.id)
+            .filter(models.User.role == "admin")
+            .all()
+        )
+    ]
+
+    for admin_id in admin_ids:
+        create_notification(
+            db,
+            user_id=admin_id,
+            type="assignment",
+            content=f"Unassigned ticket needs review: #{ticket.id} — {ticket.title}",
+            ticket_id=ticket.id
+        )
 
 
 def can_access_ticket(ticket: models.Ticket, user: models.User) -> bool:
@@ -825,6 +849,9 @@ def create_ticket(
             content=f"New ticket assigned: #{db_ticket.id} — {db_ticket.title}",
             ticket_id=db_ticket.id
         )
+        db.commit()
+    else:
+        notify_admins_about_unassigned_ticket(db, db_ticket)
         db.commit()
 
     set_ticket_sla_state(db_ticket)

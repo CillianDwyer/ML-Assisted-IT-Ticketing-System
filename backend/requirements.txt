@@ -8,4 +8,4 @@ passlib[bcrypt]
 python-jose[cryptography]
 email-validator
 joblib
-scikit-learn
+scikit-learn==1.7.2

@@ -236,10 +236,18 @@ function TicketDetails() {
             </div>
 
             <div className="chat-box conversation-feed">
+              <div className="chat-message left">
+                <div className="chat-sender">Original ticket request</div>
+                <div className="chat-content">
+                  {ticket.description?.trim() || "No description was provided for this ticket."}
+                </div>
+                <div className="chat-time">{fmtDate(ticket.created_at)}</div>
+              </div>
+
               {messages.length === 0 ? (
                 <EmptyState
                   title="No messages yet"
-                  description="Use the composer below to add an update, ask for help, or attach a file related to this ticket."
+                  description="The original issue is shown above. Use the composer below to add an update, ask for help, or attach a file related to this ticket."
                 />
               ) : (
                 messages.map((msg) => {
@@ -372,6 +380,10 @@ function TicketDetails() {
               <div>
                 <span>Issue Type</span>
                 <strong>{ticket.category}</strong>
+              </div>
+              <div>
+                <span>Description</span>
+                <strong>{ticket.description?.trim() || "No description provided"}</strong>
               </div>
               <div>
                 <span>Assigned To</span>

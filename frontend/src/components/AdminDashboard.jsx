@@ -583,111 +583,127 @@ function AdminDashboard() {
           description="Adjust the search or filters to bring tickets back into view."
         />
       ) : (
-        <div className="table-wrap" style={{ marginTop: 12 }}>
-          <table className="ticket-table admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>User</th>
-                <th>Technician</th>
-                <th>Priority</th>
-                <th>SLA</th>
-                <th>Status</th>
-                <th>Team</th>
-                <th>Issue Type</th>
-              </tr>
-            </thead>
+        <>
+          {filteredStats?.overview.unassigned > 0 && (
+            <div className="admin-triage-alert">
+              <div>
+                <strong>{filteredStats.overview.unassigned} ticket{filteredStats.overview.unassigned === 1 ? "" : "s"} need assignment</strong>
+                <span>
+                  These tickets are not being worked yet. Triage them first so they have an owner.
+                </span>
+              </div>
+            </div>
+          )}
 
-            <tbody>
-              {filteredTickets.map((t) => (
-                (() => {
-                  const selectedTeam = teamSelections[t.id] || getTicketTeam(t);
-                  const rowCategoryOptions = getIssueTypesForTeam(selectedTeam);
-                  const categoryValue = rowCategoryOptions.includes(t.category)
-                    ? t.category
-                    : "";
+          <div className="table-wrap" style={{ marginTop: 12 }}>
+            <table className="ticket-table admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Title</th>
+                  <th>User</th>
+                  <th>Technician</th>
+                  <th>Priority</th>
+                  <th>SLA</th>
+                  <th>Status</th>
+                  <th>Team</th>
+                  <th>Issue Type</th>
+                </tr>
+              </thead>
 
-                  return (
-                    <tr
-                      key={t.id}
-                      className="clickable"
-                      onClick={() => openTicket(t.id)}
-                      style={{ cursor: "pointer" }}
-                      title="Open ticket"
-                    >
-                      <td>{t.id}</td>
-                      <td className="cell-title">{t.title}</td>
+              <tbody>
+                {filteredTickets.map((t) => (
+                  (() => {
+                    const selectedTeam = teamSelections[t.id] || getTicketTeam(t);
+                    const rowCategoryOptions = getIssueTypesForTeam(selectedTeam);
+                    const categoryValue = rowCategoryOptions.includes(t.category)
+                      ? t.category
+                      : "";
+                    const isUnassigned = !t.technician_id;
 
-                      <td className="cell-email" title={t.user_email || ""}>
-                        {t.user_email || "Unknown"}
-                      </td>
+                    return (
+                      <tr
+                        key={t.id}
+                        className={`clickable admin-ticket-row ${isUnassigned ? "unassigned-ticket" : ""}`}
+                        onClick={() => openTicket(t.id)}
+                        style={{ cursor: "pointer" }}
+                        title={isUnassigned ? "Unassigned ticket needing triage" : "Open ticket"}
+                      >
+                        <td>{t.id}</td>
+                        <td className="cell-title">{t.title}</td>
 
-                      <td className="cell-email" title={t.technician_email || ""}>
-                        {t.technician_email || "Unassigned"}
-                      </td>
+                        <td className="cell-email" title={t.user_email || ""}>
+                          {t.user_email || "Unknown"}
+                        </td>
 
-                      <td>
-                        <span className={priorityClass(derivePriority(t))}>
-                          {derivePriority(t)}
-                        </span>
-                      </td>
+                        <td className="cell-email" title={t.technician_email || ""}>
+                          {t.technician_email || (
+                            <span className="unassigned-pill">Needs assignment</span>
+                          )}
+                        </td>
 
-                      <td>
-                        <span className={slaClass(getSlaState(t).level)}>
-                          {getSlaState(t).label}
-                        </span>
-                      </td>
+                        <td>
+                          <span className={priorityClass(derivePriority(t))}>
+                            {derivePriority(t)}
+                          </span>
+                        </td>
 
-                      {/* Stop click from bubbling when using dropdowns */}
-                      <td onClick={stopRowClick}>
-                        <select
-                          value={t.status ?? "Open"}
-                          onChange={(e) => updateStatus(t.id, e.target.value)}
-                        >
-                          {STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+                        <td>
+                          <span className={slaClass(getSlaState(t).level)}>
+                            {getSlaState(t).label}
+                          </span>
+                        </td>
 
-                      <td onClick={stopRowClick}>
-                        <select
-                          className="ticket-input"
-                          value={selectedTeam}
-                          onChange={(e) => setSelectedTeamForTicket(t.id, e.target.value)}
-                        >
-                          {TEAM_NAMES.map((team) => (
-                            <option key={team} value={team}>
-                              {team}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+                        {/* Stop click from bubbling when using dropdowns */}
+                        <td onClick={stopRowClick}>
+                          <select
+                            value={t.status ?? "Open"}
+                            onChange={(e) => updateStatus(t.id, e.target.value)}
+                          >
+                            {STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
 
-                      <td onClick={stopRowClick}>
-                        <select
-                          className="ticket-input"
-                          value={categoryValue}
-                          onChange={(e) => updateCategory(t.id, e.target.value)}
-                        >
-                          <option value="">Select issue type</option>
-                          {rowCategoryOptions.map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                  );
-                })()
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        <td onClick={stopRowClick}>
+                          <select
+                            className="ticket-input"
+                            value={selectedTeam}
+                            onChange={(e) => setSelectedTeamForTicket(t.id, e.target.value)}
+                          >
+                            {TEAM_NAMES.map((team) => (
+                              <option key={team} value={team}>
+                                {team}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        <td onClick={stopRowClick}>
+                          <select
+                            className="ticket-input"
+                            value={categoryValue}
+                            onChange={(e) => updateCategory(t.id, e.target.value)}
+                          >
+                            <option value="">Select issue type</option>
+                            {rowCategoryOptions.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })()
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Analytics */}

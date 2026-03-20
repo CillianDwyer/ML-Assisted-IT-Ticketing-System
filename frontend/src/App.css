@@ -3204,6 +3204,79 @@ body.reduce-motion *::after {
   font-weight: 800;
 }
 
+.admin-triage-alert {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  background:
+    radial-gradient(circle at top left, rgba(248, 113, 113, 0.18), transparent 48%),
+    linear-gradient(180deg, rgba(254, 242, 242, 0.96) 0%, rgba(255, 247, 237, 0.96) 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .admin-triage-alert {
+  border-color: rgba(248, 113, 113, 0.28);
+  background:
+    radial-gradient(circle at top left, rgba(248, 113, 113, 0.2), transparent 48%),
+    linear-gradient(180deg, rgba(69, 10, 10, 0.82) 0%, rgba(31, 41, 55, 0.82) 100%);
+}
+
+.admin-triage-alert strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.98rem;
+}
+
+.admin-triage-alert span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-ticket-row.unassigned-ticket {
+  background:
+    linear-gradient(90deg, rgba(220, 38, 38, 0.18) 0 5px, transparent 5px),
+    rgba(254, 242, 242, 0.7);
+}
+
+.dark .admin-ticket-row.unassigned-ticket {
+  background:
+    linear-gradient(90deg, rgba(248, 113, 113, 0.3) 0 5px, transparent 5px),
+    rgba(69, 10, 10, 0.3);
+}
+
+.admin-ticket-row.unassigned-ticket:hover {
+  background:
+    linear-gradient(90deg, rgba(220, 38, 38, 0.26) 0 5px, transparent 5px),
+    rgba(254, 226, 226, 0.9);
+}
+
+.dark .admin-ticket-row.unassigned-ticket:hover {
+  background:
+    linear-gradient(90deg, rgba(248, 113, 113, 0.38) 0 5px, transparent 5px),
+    rgba(127, 29, 29, 0.38);
+}
+
+.unassigned-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.16);
+  color: #991b1b;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.dark .unassigned-pill {
+  background: rgba(248, 113, 113, 0.22);
+  color: #fecaca;
+}
+
 /* Make selects smaller in table */
 .ticket-table select {
   min-width: 0;
