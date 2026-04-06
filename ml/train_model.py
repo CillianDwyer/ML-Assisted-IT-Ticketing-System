@@ -12,7 +12,7 @@ from sklearn.svm import LinearSVC
 
 
 DEFAULT_DATASET = Path(
-    r"C:\Users\GGGba.DESKTOP-5RI379L\Downloads\it_ticket_issue_type_dataset_harder_58000.csv"
+    r"C:\Users\GGGba.DESKTOP-5RI379L\Downloads\helpdesk_tickets_synthetic.csv"
 )
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUTS = [
