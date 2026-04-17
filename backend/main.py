@@ -469,13 +469,31 @@ def notify_admins_about_unassigned_ticket(db: Session, ticket: models.Ticket):
         )
 
 
-def can_access_ticket(ticket: models.Ticket, user: models.User) -> bool:
+def is_private_assist_participant(db: Session, ticket_id: int, user_id: int) -> bool:
+    return (
+        db.query(models.TicketMessage.id)
+        .filter(
+            models.TicketMessage.ticket_id == ticket_id,
+            models.TicketMessage.is_private == True,
+            or_(
+                models.TicketMessage.sender_id == user_id,
+                models.TicketMessage.recipient_id == user_id,
+            )
+        )
+        .first()
+        is not None
+    )
+
+
+def can_access_ticket(ticket: models.Ticket, user: models.User, db: Session | None = None) -> bool:
     if user.role == "admin":
         return True
     if user.role == "user":
         return ticket.user_id == user.id
     if user.role == "technician":
-        return ticket.technician_id == user.id
+        if ticket.technician_id == user.id:
+            return True
+        return db is not None and is_private_assist_participant(db, ticket.id, user.id)
     return False
 
 
@@ -786,9 +804,7 @@ def get_ticket_by_id(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    if current_user.role == "user" and ticket.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    if current_user.role == "technician" and ticket.technician_id != current_user.id:
+    if not can_access_ticket(ticket, current_user, db):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     changed = refresh_ticket_priority(ticket)
@@ -1033,7 +1049,7 @@ def get_assist_users(
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if not can_access_ticket(ticket, current_user):
+    if not can_access_ticket(ticket, current_user, db):
         raise HTTPException(status_code=403, detail="Not authorized")
     if current_user.role not in ["technician", "admin"]:
         raise HTTPException(status_code=403, detail="Only technicians/admins can send private assistance messages")
@@ -1059,7 +1075,7 @@ def get_ticket_messages(
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if not can_access_ticket(ticket, current_user):
+    if not can_access_ticket(ticket, current_user, db):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     query = db.query(models.TicketMessage).filter(models.TicketMessage.ticket_id == ticket_id)
@@ -1101,7 +1117,7 @@ def add_ticket_message(
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if not can_access_ticket(ticket, current_user):
+    if not can_access_ticket(ticket, current_user, db):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     text_content = (message.content or "").strip()
@@ -1203,7 +1219,7 @@ def add_ticket_message_with_attachment(
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if not can_access_ticket(ticket, current_user):
+    if not can_access_ticket(ticket, current_user, db):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     text_content = (content or "").strip()
@@ -1305,7 +1321,7 @@ def download_message_attachment(
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if not can_access_ticket(ticket, current_user):
+    if not can_access_ticket(ticket, current_user, db):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     message = (
@@ -1318,6 +1334,13 @@ def download_message_attachment(
     )
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
+    if (
+        message.is_private
+        and current_user.role != "admin"
+        and message.sender_id != current_user.id
+        and message.recipient_id != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
     if not message.attachment_path or not os.path.exists(message.attachment_path):
         raise HTTPException(status_code=404, detail="Attachment not found")
 

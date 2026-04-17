@@ -16,6 +16,7 @@ function TicketDetails() {
   const navigate = useNavigate();
 
   const [ticket, setTicket] = useState(null);
+  const [ticketError, setTicketError] = useState("");
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [assistUsers, setAssistUsers] = useState([]);
@@ -31,11 +32,21 @@ function TicketDetails() {
     currentUserRole === "technician" || currentUserRole === "admin";
 
   const fetchTicket = async () => {
+    setTicketError("");
     try {
       const res = await api.get(`/tickets/${id}`);
       setTicket(res.data);
     } catch (err) {
       console.error("Error loading ticket", err);
+      setTicket(null);
+      const status = err.response?.status;
+      if (status === 403) {
+        setTicketError("You do not have access to this ticket.");
+      } else if (status === 404) {
+        setTicketError("This ticket could not be found.");
+      } else {
+        setTicketError("Ticket details could not be loaded. Please try again.");
+      }
     }
   };
 
@@ -63,7 +74,7 @@ function TicketDetails() {
     fetchTicket();
     fetchMessages();
     fetchAssistUsers();
-  }, []);
+  }, [id]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() && !selectedFile) return;
@@ -160,6 +171,22 @@ function TicketDetails() {
   const priorityClass = (priorityExplanation?.currentPriority || ticket?.priority || "medium")
     .toLowerCase()
     .replace(/\s+/g, "-");
+
+  if (ticketError) {
+    return (
+      <div className="ticket-card dashboard-card ticket-workspace-shell">
+        <PageHeader
+          title="Ticket unavailable"
+          subtitle={ticketError}
+          action={
+            <button className="page-header-action" onClick={() => navigate(-1)}>
+              Go Back
+            </button>
+          }
+        />
+      </div>
+    );
+  }
 
   if (!ticket) return <p>Loading ticket...</p>;
 

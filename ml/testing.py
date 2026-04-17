@@ -19,6 +19,7 @@ DEFAULT_TRAIN_DATASET = Path(
 DEFAULT_EVAL_DATASET = Path(
     r"C:\Users\GGGba.DESKTOP-5RI379L\Downloads\helpdesk_tickets_unseen_test.csv"
 )
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def parse_args():
@@ -54,7 +55,7 @@ def parse_args():
     parser.add_argument(
         "--show-confusion-matrix",
         action="store_true",
-        help="Print the confusion matrix for the best-performing model.",
+        help="Print confusion matrices for the best-performing model and LinearSVC.",
     )
     return parser.parse_args()
 
@@ -65,6 +66,16 @@ def load_dataset(dataset_path: Path) -> tuple[pd.Series, pd.Series]:
     df["description"] = df["description"].astype(str).str.strip()
     df = df[df["description"] != ""]
     return df["description"], df["issue_type"]
+
+
+def print_full_dataframe(df: pd.DataFrame):
+    with pd.option_context(
+        "display.max_rows", None,
+        "display.max_columns", None,
+        "display.width", None,
+        "display.max_colwidth", None,
+    ):
+        print(df)
 
 
 def build_vectorizer() -> TfidfVectorizer:
@@ -199,7 +210,26 @@ def main():
         )
         cm_df = pd.DataFrame(cm, index=labels, columns=labels)
         print(f"\nConfusion Matrix for best model: {best_name}\n")
-        print(cm_df)
+        print_full_dataframe(cm_df)
+
+        linear_svc_name = "LinearSVC"
+        if linear_svc_name in predictions_by_model:
+            linear_svc_cm = confusion_matrix(
+                y_test,
+                predictions_by_model[linear_svc_name],
+                labels=labels,
+            )
+            linear_svc_cm_df = pd.DataFrame(
+                linear_svc_cm,
+                index=labels,
+                columns=labels,
+            )
+            print(f"\nConfusion Matrix for chosen model: {linear_svc_name}\n")
+            print_full_dataframe(linear_svc_cm_df)
+
+            output_path = PROJECT_ROOT / "ml" / "linear_svc_confusion_matrix.csv"
+            linear_svc_cm_df.to_csv(output_path)
+            print(f"\nSaved LinearSVC confusion matrix to {output_path}")
 
 
 if __name__ == "__main__":
