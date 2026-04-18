@@ -46,7 +46,7 @@ class TicketResponse(BaseModel):
     user_email: Optional[str] = None
     technician_email: Optional[str] = None
 
-    # NEW timestamps
+    # timestamps
     created_at: datetime
     updated_at: datetime
     closed_at: Optional[datetime] = None

@@ -1,5 +1,7 @@
 const HOUR = 1000 * 60 * 60;
 
+// Frontend copy of the backend escalation thresholds so dashboards can
+// present consistent priority/SLA indicators from ticket timestamps.
 const PRIORITY_THRESHOLDS = {
   low: 72,
   medium: 48,
@@ -8,6 +10,8 @@ const PRIORITY_THRESHOLDS = {
 };
 const PRIORITY_ORDER = ["Low", "Medium", "High", "Critical"];
 export const ADMIN_REVIEW_QUEUE = "Admin Review Queue";
+
+// Shared issue-type list used to build dashboard filters and category dropdowns.
 export const ISSUE_TYPES = [
   "Access Request",
   "Account Compromise",
@@ -39,6 +43,8 @@ export const ISSUE_TYPES = [
   "VPN Issue",
   "Wi-Fi Connectivity Issue",
 ];
+
+// Mirrors the backend category-to-team routing rules for display and selection.
 const ISSUE_TYPE_TO_TEAM = {
   "Password Reset": "Service Desk",
   "Account Lockout": "Service Desk",
@@ -70,6 +76,8 @@ const ISSUE_TYPE_TO_TEAM = {
   "Account Compromise": "Security Team",
   "Security Policy Violation": "Security Team",
 };
+
+// Base priority before age-based escalation is applied.
 const ISSUE_TYPE_BASE_PRIORITY = {
   "Access Request": "Low",
   "Account Compromise": "Critical",
@@ -116,6 +124,7 @@ export function getIssueTypesForTeam(team) {
 }
 
 export function getTicketTeam(ticket) {
+  // Prefer the persisted backend value when it exists.
   const persistedTeam = String(ticket?.team || "").trim();
   if (persistedTeam) return persistedTeam;
 
@@ -136,6 +145,7 @@ function hoursSince(value) {
 }
 
 export function derivePriority(ticket) {
+  // Use the backend-computed value first; derive only as a display fallback.
   const persistedPriority = String(ticket?.priority || "").trim();
   if (persistedPriority) return persistedPriority;
   if (!ticket || ticket.status === "Closed") return "Low";
@@ -160,6 +170,7 @@ export function derivePriority(ticket) {
 
 export function getSlaState(ticket) {
   if (!ticket) return { label: "N/A", level: "ok" };
+  // Use the backend SLA state when present so the UI matches API responses.
   const persistedSla = String(ticket.sla_state || "").trim().toLowerCase();
   if (persistedSla === "met") return { label: "Met", level: "ok" };
   if (persistedSla === "breached") return { label: "Breached", level: "breach" };
@@ -186,6 +197,7 @@ export function slaClass(level) {
 }
 
 export function getPriorityExplanation(ticket) {
+  // Builds a short explanation for tooltips/details views.
   const team = getTicketTeam(ticket);
   const basePriority = getBasePriority(ticket);
   const currentPriority = derivePriority(ticket);

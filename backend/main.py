@@ -532,8 +532,8 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_pw = auth.get_password_hash(user.password)
-    # Public registration is always a regular user.
-    # Admin/technician demo users are seeded separately.
+    #Public registration is always a regular user.
+    #Admin/technician demo users are seeded separately.
     new_user = models.User(email=user.email, hashed_password=hashed_pw, role="user")
     db.add(new_user)
     db.commit()
@@ -632,7 +632,7 @@ def mark_all_notifications_read(
     return {"success": True}
 
 # ---------------------------
-# ✅ Admin Stats (NEW)
+# Admin Stats
 # ---------------------------
 @app.get("/admin/stats")
 def admin_stats(

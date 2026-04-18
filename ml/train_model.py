@@ -11,10 +11,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
 
-DEFAULT_DATASET = Path(
-    r"C:\Users\GGGba.DESKTOP-5RI379L\Downloads\helpdesk_tickets_synthetic.csv"
-)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "ml" / "data"
+DEFAULT_DATASET = DATA_DIR / "helpdesk_tickets_synthetic.csv"
 DEFAULT_OUTPUTS = [
     PROJECT_ROOT / "ml" / "ticket_classifier.pkl",
     PROJECT_ROOT / "backend" / "ml" / "ticket_classifier.pkl",

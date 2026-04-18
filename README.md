@@ -6,6 +6,7 @@ It consists of:
 - a FastAPI backend in `backend/`
 - a React + Vite frontend in `frontend/`
 - an ML classifier and training utilities in `ml/` and `backend/ml/`
+- project-local ML datasets in `ml/data/`
 
 ## Project Summary
 
@@ -33,13 +34,15 @@ This repository is intended for local demonstration/assessment use.
 - The application uses SQLite and stores data in `backend/tickets.db`.
 - Uploaded attachments are stored in `backend/uploads/`.
 - The trained ML model used by the backend is included at `backend/ml/ticket_classifier.pkl`.
-- ML retraining scripts are included, but retraining requires a dataset path to be provided.
+- Training and evaluation datasets used by the ML scripts are included in `ml/data/`.
+- ML retraining scripts are included, but retraining is optional for running the submitted system.
 
 ## Project Structure
 
 - `backend/` - FastAPI API, database models, authentication, business logic, uploads, SQLite database
 - `frontend/` - React UI built with Vite
 - `ml/` - model training and evaluation scripts
+- `ml/data/` - project-local synthetic training/evaluation datasets and saved confusion matrix output
 - `backend/ml/` - model loading and inference used at runtime by the API
 
 ## Requirements
@@ -150,8 +153,33 @@ Training utilities are included in `ml/train_model.py` and `ml/testing.py`.
 Important:
 - Retraining is optional for running the submitted project.
 - The trained model file is already included for runtime use.
-- To retrain, provide your own dataset path with `--dataset` or the `TICKET_DATASET_PATH` environment variable.
-- The default dataset paths in the ML scripts are local development paths and may need to be changed on another machine.
+- The default training dataset is `ml/data/helpdesk_tickets_synthetic.csv`.
+- The default evaluation dataset for model comparison is `ml/data/helpdesk_tickets_unseen_test.csv`.
+- The deployed backend model at `backend/ml/ticket_classifier.pkl` matches the project training output.
+- You can still override dataset paths with command-line arguments or environment variables if needed.
+
+### Reproducing ML Scripts
+
+From the project root:
+
+Train the deployed classifier:
+
+```bash
+python ml/train_model.py
+```
+
+Compare candidate models on the included train/evaluation datasets:
+
+```bash
+python ml/testing.py
+```
+
+Optional examples:
+
+```bash
+python ml/train_model.py --dataset ml/data/helpdesk_tickets_synthetic.csv
+python ml/testing.py --train-dataset ml/data/helpdesk_tickets_synthetic.csv --eval-dataset ml/data/helpdesk_tickets_unseen_test.csv --show-confusion-matrix
+```
 
 ## Priority and SLA Policy
 

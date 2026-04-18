@@ -2,7 +2,6 @@
 # Classes represent database tables
 
 from datetime import datetime
-
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
@@ -52,7 +51,7 @@ class Ticket(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     technician_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # ✅ NEW timestamps (for analytics)
+    # timestamps (for analytics)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     closed_at = Column(DateTime, nullable=True)
