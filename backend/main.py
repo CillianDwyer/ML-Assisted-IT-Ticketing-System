@@ -31,9 +31,12 @@ app.add_middleware(
 
 models.Base.metadata.create_all(bind=database.engine)
 
+# Local storage for uploaded message attachments.
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+
+# Age thresholds used for escalating unresolved tickets.
 PRIORITY_THRESHOLDS_HOURS = {
     "low": 72,
     "medium": 48,
@@ -41,6 +44,8 @@ PRIORITY_THRESHOLDS_HOURS = {
     "critical": 12,
 }
 PRIORITY_ORDER = ["Low", "Medium", "High", "Critical"]
+
+# Resolution targets used for SLA state calculation.
 SLA_TARGET_HOURS = {
     "Low": 72,
     "Medium": 48,
@@ -121,6 +126,7 @@ TEAM_BASE_PRIORITY = {
 
 
 def resolve_ticket_team(category: str | None) -> str | None:
+    # Converts an issue type into the owning support team.
     normalized_category = (category or "").strip()
     if not normalized_category:
         return None
@@ -130,6 +136,7 @@ def resolve_ticket_team(category: str | None) -> str | None:
 
 
 def ensure_ticket_message_columns():
+    # Lightweight startup migration so older SQLite files still work.
     db = database.SessionLocal()
     try:
         cols = db.execute(text("PRAGMA table_info(ticket_messages)")).fetchall()
@@ -196,6 +203,7 @@ def compute_ticket_priority(
     category: str | None,
     created_at: datetime | str | None
 ) -> str:
+    # Closed tickets are treated as no longer urgent.
     if not status or status == "Closed":
         return "Low"
 
@@ -230,6 +238,7 @@ def compute_ticket_priority(
 
 
 def ensure_ticket_priority_column():
+    # Adds and backfills the priority column for older databases.
     db = database.SessionLocal()
     try:
         cols = db.execute(text("PRAGMA table_info(tickets)")).fetchall()
@@ -257,6 +266,7 @@ def ensure_ticket_priority_column():
 
 
 def ensure_ticket_team_column():
+    # Adds and backfills the team column for older databases.
     db = database.SessionLocal()
     try:
         cols = db.execute(text("PRAGMA table_info(tickets)")).fetchall()
@@ -286,6 +296,7 @@ ensure_ticket_priority_column()
 
 
 def refresh_ticket_priority(ticket: models.Ticket) -> bool:
+    # Recomputes priority after a ticket changes and reports whether it changed.
     computed = compute_ticket_priority(
         status=ticket.status,
         category=ticket.category,
@@ -298,6 +309,7 @@ def refresh_ticket_priority(ticket: models.Ticket) -> bool:
 
 
 def compute_ticket_sla_state(ticket: models.Ticket) -> str:
+    # Converts ticket age vs target window into a simple SLA label.
     if ticket.status == "Closed":
         return "met"
 
@@ -323,6 +335,7 @@ def compute_ticket_sla_state(ticket: models.Ticket) -> str:
 
 
 def set_ticket_sla_state(ticket: models.Ticket):
+    # Attached dynamically for API responses and frontend display.
     ticket.sla_state = compute_ticket_sla_state(ticket)
 
 # ---------------------------
@@ -339,6 +352,7 @@ def get_db():
 # Seed users
 # ---------------------------
 def seed_default_users():
+    # Seeds demo users used for local assessment and role-based testing.
     db = database.SessionLocal()
     admin_email = "admin@example.com"
 
@@ -380,6 +394,7 @@ seed_default_users()
 
 
 def cleanup_legacy_technician_accounts():
+    # Moves old demo-account references onto the current technician accounts.
     db = database.SessionLocal()
     try:
         legacy_mapping = {
@@ -438,6 +453,7 @@ def create_notification(
     content: str,
     ticket_id: int | None = None
 ):
+    # Central notification helper so events are created consistently.
     notif = models.Notification(
         user_id=user_id,
         type=type,
@@ -450,6 +466,7 @@ def create_notification(
 
 
 def notify_admins_about_unassigned_ticket(db: Session, ticket: models.Ticket):
+    # Unassigned or uncategorized tickets are surfaced to admins for review.
     admin_ids = [
         user_id
         for (user_id,) in (
@@ -470,6 +487,7 @@ def notify_admins_about_unassigned_ticket(db: Session, ticket: models.Ticket):
 
 
 def is_private_assist_participant(db: Session, ticket_id: int, user_id: int) -> bool:
+    # Technicians can access tickets where they are part of a private assist exchange.
     return (
         db.query(models.TicketMessage.id)
         .filter(
@@ -486,6 +504,7 @@ def is_private_assist_participant(db: Session, ticket_id: int, user_id: int) -> 
 
 
 def can_access_ticket(ticket: models.Ticket, user: models.User, db: Session | None = None) -> bool:
+    # Central ticket-access rule used across ticket and messaging endpoints.
     if user.role == "admin":
         return True
     if user.role == "user":
@@ -498,6 +517,7 @@ def can_access_ticket(ticket: models.Ticket, user: models.User, db: Session | No
 
 
 def extract_mentioned_email(text_content: str) -> str | None:
+    # Supports private assist targeting via @email mentions inside message text.
     if not text_content:
         return None
 
@@ -509,6 +529,7 @@ def extract_mentioned_email(text_content: str) -> str | None:
 
 
 def save_message_attachment(ticket_id: int, file: UploadFile) -> tuple[str, str, str | None, int]:
+    # Stores uploads with a generated filename while preserving the display name.
     safe_name = os.path.basename(file.filename or "attachment")
     ext = os.path.splitext(safe_name)[1]
     stored_name = f"{ticket_id}_{uuid.uuid4().hex}{ext}"
@@ -826,6 +847,7 @@ def create_ticket(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
+    # Main workflow: classify, route, prioritise, assign, save, then notify.
     predicted_category = predict_category(ticket.description)
     predicted_team = resolve_ticket_team(predicted_category)
     now = datetime.utcnow()
@@ -1080,6 +1102,7 @@ def get_ticket_messages(
 
     query = db.query(models.TicketMessage).filter(models.TicketMessage.ticket_id == ticket_id)
     if current_user.role != "admin":
+        # Non-admin users only receive public messages plus private messages they participate in.
         query = query.filter(
             or_(
                 models.TicketMessage.is_private == False,
@@ -1340,6 +1363,7 @@ def download_message_attachment(
         and message.sender_id != current_user.id
         and message.recipient_id != current_user.id
     ):
+        # Private attachments follow the same visibility rules as private messages.
         raise HTTPException(status_code=403, detail="Not authorized")
     if not message.attachment_path or not os.path.exists(message.attachment_path):
         raise HTTPException(status_code=404, detail="Attachment not found")

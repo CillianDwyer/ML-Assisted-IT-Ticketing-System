@@ -20,6 +20,7 @@ DEFAULT_EVAL_DATASET = DATA_DIR / "helpdesk_tickets_unseen_test.csv"
 
 
 def parse_args():
+    # Supports either train/test split evaluation or train-on-one / evaluate-on-another.
     parser = argparse.ArgumentParser(
         description=(
             "Compare text classification models on IT ticket data. "
@@ -58,6 +59,7 @@ def parse_args():
 
 
 def load_dataset(dataset_path: Path) -> tuple[pd.Series, pd.Series]:
+    # Keeps only rows with usable ticket text and labels.
     df = pd.read_csv(dataset_path)
     df = df.dropna(subset=["description", "issue_type"])
     df["description"] = df["description"].astype(str).str.strip()
@@ -76,6 +78,7 @@ def print_full_dataframe(df: pd.DataFrame):
 
 
 def build_vectorizer() -> TfidfVectorizer:
+    # Shared text representation used by every model in the comparison.
     return TfidfVectorizer(
         stop_words="english",
         ngram_range=(1, 2),
@@ -86,6 +89,7 @@ def build_vectorizer() -> TfidfVectorizer:
 
 
 def build_models():
+    # Candidate classifiers compared on the same TF-IDF features.
     return {
         "LinearSVC": LinearSVC(),
         "LogisticRegression": LogisticRegression(
@@ -122,6 +126,7 @@ def main():
         X_test, y_test = load_dataset(eval_dataset_path)
         X_train = X_train_all
         y_train = y_train_all
+        # Guard against evaluation labels that the model never saw during training.
         labels_in_train = set(y_train.unique())
         labels_in_eval = set(y_test.unique())
         missing_from_train = sorted(labels_in_eval - labels_in_train)
@@ -158,6 +163,7 @@ def main():
     predictions_by_model = {}
 
     for name, clf in build_models().items():
+        # Every model uses the same vectorizer so the comparison stays fair.
         pipeline = Pipeline(
             [
                 ("tfidf", build_vectorizer()),
@@ -181,6 +187,7 @@ def main():
         print("\nClassification Report:\n")
         print(classification_report(y_test, y_pred))
 
+    # Rank models by macro F1 so class balance matters more than raw accuracy alone.
     results.sort(key=lambda row: row[2], reverse=True)
     best_name, best_accuracy, best_macro_f1, best_weighted_f1 = results[0]
 
@@ -224,6 +231,7 @@ def main():
             print(f"\nConfusion Matrix for chosen model: {linear_svc_name}\n")
             print_full_dataframe(linear_svc_cm_df)
 
+            # Save the chosen deployment model's confusion matrix for reporting.
             output_path = PROJECT_ROOT / "ml" / "linear_svc_confusion_matrix.csv"
             linear_svc_cm_df.to_csv(output_path)
             print(f"\nSaved LinearSVC confusion matrix to {output_path}")

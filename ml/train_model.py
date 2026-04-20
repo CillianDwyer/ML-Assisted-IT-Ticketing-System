@@ -5,8 +5,6 @@ from pathlib import Path
 import joblib
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, classification_report, f1_score
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
@@ -21,6 +19,7 @@ DEFAULT_OUTPUTS = [
 
 
 def parse_args():
+    # Lets the training dataset be overridden without editing the script.
     parser = argparse.ArgumentParser(
         description="Train the IT issue-type classifier from a CSV dataset."
     )
@@ -33,6 +32,7 @@ def parse_args():
 
 
 def load_dataset(dataset_path: Path) -> tuple[pd.Series, pd.Series]:
+    # Keeps only rows with usable ticket text and labels.
     df = pd.read_csv(dataset_path)
     df = df.dropna(subset=["description", "issue_type"])
     df["description"] = df["description"].astype(str).str.strip()
@@ -42,6 +42,7 @@ def load_dataset(dataset_path: Path) -> tuple[pd.Series, pd.Series]:
 
 
 def build_pipeline() -> Pipeline:
+    # Matches the runtime model structure used by the backend.
     return Pipeline(
         [
             (
@@ -68,27 +69,15 @@ def main():
 
     X, y = load_dataset(dataset_path)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.2,
-        random_state=42,
-        stratify=y,
-    )
-
     pipeline = build_pipeline()
-    pipeline.fit(X_train, y_train)
-
-    y_pred = pipeline.predict(X_test)
+    pipeline.fit(X, y)
 
     print(f"Dataset: {dataset_path}")
     print(f"Rows used: {len(X)}")
     print(f"Labels: {y.nunique()}")
-    print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
-    print(f"Macro F1: {f1_score(y_test, y_pred, average='macro'):.4f}")
-    print("\nClassification Report:\n")
-    print(classification_report(y_test, y_pred))
+    print("Training mode: full dataset")
 
+    # Save the same trained pipeline to both ML and backend runtime locations.
     for output_path in DEFAULT_OUTPUTS:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(pipeline, output_path)

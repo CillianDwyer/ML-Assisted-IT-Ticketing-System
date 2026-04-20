@@ -1,49 +1,28 @@
 # IT Ticketing System
 
-This project is a role-based IT support ticketing platform built as a full-stack application with machine-learning-assisted ticket classification.
+A full-stack IT support ticketing platform with role-based access and machine-learning-assisted ticket classification.
 
-It consists of:
-- a FastAPI backend in `backend/`
-- a React + Vite frontend in `frontend/`
-- an ML classifier and training utilities in `ml/` and `backend/ml/`
-- project-local ML datasets in `ml/data/`
+The system lets users submit support tickets, predicts an issue type from the ticket description, maps that issue type to a support team, and supports technician/admin workflows for triage, updates, messaging, notifications, and dashboards.
 
-## Project Summary
+## Stack
 
-The system allows end users to submit IT support tickets, automatically predicts the likely issue type from the ticket description, maps that issue type to the correct support team, and then supports technician/admin workflows for triage, tracking, messaging, and analytics.
-
-Main capabilities include:
-- JWT authentication with role-based access for `user`, `technician`, and `admin`
-- ticket creation, assignment, category updates, and status changes
-- ticket messaging with:
-  - public ticket messages
-  - private assist messages between technicians/admins
-  - file attachments and downloads
-- notifications with unread counts and mark-read actions
-- overview, technician, and admin dashboards
-- ML-based category prediction during ticket creation
-- priority and SLA logic based on issue type and ticket age
-
-## Assessor Notes
-
-This repository is intended for local demonstration/assessment use.
-
-- The frontend expects the backend API to run at `http://127.0.0.1:8000`.
-- The frontend dev server runs at `http://127.0.0.1:5173`.
-- Demo accounts are seeded by the backend for assessment purposes.
-- The application uses SQLite and stores data in `backend/tickets.db`.
-- Uploaded attachments are stored in `backend/uploads/`.
-- The trained ML model used by the backend is included at `backend/ml/ticket_classifier.pkl`.
-- Training and evaluation datasets used by the ML scripts are included in `ml/data/`.
-- ML retraining scripts are included, but retraining is optional for running the submitted system.
-
-## Project Structure
-
-- `backend/` - FastAPI API, database models, authentication, business logic, uploads, SQLite database
-- `frontend/` - React UI built with Vite
+- `backend/` - FastAPI API, SQLite database, authentication, ticket logic, notifications, uploads
+- `frontend/` - React + Vite client
+- `backend/ml/` - runtime model loading and inference
 - `ml/` - model training and evaluation scripts
-- `ml/data/` - project-local synthetic training/evaluation datasets and saved confusion matrix output
-- `backend/ml/` - model loading and inference used at runtime by the API
+- `ml/data/` - included datasets used by the ML scripts
+
+## Main Features
+
+- JWT authentication with roles: `user`, `technician`, `admin`
+- ticket creation with ML-based issue-type prediction
+- team routing, technician assignment, priority, and SLA status
+- ticket status and category updates
+- public ticket messages
+- private assist messages between technicians/admins
+- attachment upload and download on ticket messages
+- notifications with unread count, mark-read, and mark-all-read actions
+- overview, technician, and admin dashboards
 
 ## Requirements
 
@@ -51,11 +30,11 @@ This repository is intended for local demonstration/assessment use.
 - Node.js 18+
 - npm 9+
 
-## Running the Project
+## Run Locally
 
 Start the backend first, then the frontend.
 
-### 1. Backend Setup
+### Backend
 
 From the project root:
 
@@ -73,7 +52,13 @@ Backend URL:
 http://127.0.0.1:8000
 ```
 
-### 2. Frontend Setup
+Notes:
+
+- The SQLite database is created from `backend/` and stored as `backend/tickets.db`.
+- Uploaded attachments are stored in `backend/uploads/`.
+- `backend/requirements.txt` covers both backend runtime dependencies and the included ML scripts.
+
+### Frontend
 
 From the project root in a new terminal:
 
@@ -89,14 +74,15 @@ Frontend URL:
 http://127.0.0.1:5173
 ```
 
+The frontend is configured to call the backend at `http://127.0.0.1:8000`.
+
 ## Demo Accounts
 
-The backend seeds demo accounts automatically on startup. These accounts are included for demonstration and assessment only.
+The backend seeds demo staff accounts automatically on startup.
 
 ### Admin
 
-- Email: `admin@example.com`
-- Password: `admin123`
+- `admin@example.com` / `admin123`
 
 ### Technicians
 
@@ -106,184 +92,115 @@ The backend seeds demo accounts automatically on startup. These accounts are inc
 - `systemsteam@example.com` / `tech123`
 - `securityteam@example.com` / `tech123`
 
-Normal end users can also be created through the Register page.
+Regular end users can register from the UI.
 
-## Core Features
+## How Routing Works
 
-### User Features
+When a user creates a ticket:
 
-- register and log in
-- create support tickets
-- view personal tickets
-- send and receive ticket messages
-- download attachments from ticket conversations
-- receive notifications about updates
+1. the backend predicts an issue type from the ticket description
+2. that issue type is mapped to a support team
+3. priority is calculated from the issue type and ticket age
+4. SLA state is derived from ticket age versus the target window
+5. if a matching technician exists for that team, the ticket is assigned automatically; otherwise it remains unassigned for admin review
 
-### Technician Features
+If the model is unavailable or the description is too short/low-signal, the ticket falls back to `Uncategorized`.
 
-- view assigned tickets
-- update ticket status
-- update category/issue type
-- monitor SLA risk and queue priority
-- send public and private assist messages
+## Priority and SLA
 
-### Admin Features
+Priority starts from the ticket issue type and escalates with age:
 
-- view all tickets across the system
-- triage unassigned tickets
-- update ticket category and status
-- review analytics and dashboard charts
-- monitor workload, ticket distribution, and queue health
+- after `24` hours: escalate by one level
+- after `48` hours: escalate by two levels
+- after `72` hours: escalate to `Critical`
+- closed tickets are treated as `Low`
 
-## Machine Learning Component
+SLA state is shown as:
 
-The project includes a text classification model that predicts an IT issue type from the ticket description.
+- `On Track`
+- `At Risk`
+- `Breached`
 
-### Runtime Usage
+## Machine Learning
 
-- The backend loads the trained model from `backend/ml/ticket_classifier.pkl`.
-- Inference logic is implemented in `backend/ml/ml_model.py`.
-- When a ticket is created, the backend predicts the issue type and stores it as the ticket `category`.
-- The predicted issue type is then mapped to a support team for routing.
+Runtime inference:
 
-### Training
+- model file: `backend/ml/ticket_classifier.pkl`
+- loader/inference code: `backend/ml/ml_model.py`
 
-Training utilities are included in `ml/train_model.py` and `ml/testing.py`.
+Training and evaluation:
 
-Important:
-- Retraining is optional for running the submitted project.
-- The trained model file is already included for runtime use.
-- The default training dataset is `ml/data/helpdesk_tickets_synthetic.csv`.
-- The default evaluation dataset for model comparison is `ml/data/helpdesk_tickets_unseen_test.csv`.
-- The deployed backend model at `backend/ml/ticket_classifier.pkl` matches the project training output.
-- You can still override dataset paths with command-line arguments or environment variables if needed.
+- train: `python ml/train_model.py`
+- compare models: `python ml/testing.py`
 
-### Reproducing ML Scripts
+Included datasets:
 
-From the project root:
-
-Train the deployed classifier:
-
-```bash
-python ml/train_model.py
-```
-
-Compare candidate models on the included train/evaluation datasets:
-
-```bash
-python ml/testing.py
-```
-
-Optional examples:
-
-```bash
-python ml/train_model.py --dataset ml/data/helpdesk_tickets_synthetic.csv
-python ml/testing.py --train-dataset ml/data/helpdesk_tickets_synthetic.csv --eval-dataset ml/data/helpdesk_tickets_unseen_test.csv --show-confusion-matrix
-```
-
-## Priority and SLA Policy
-
-Ticket priority is calculated in two stages:
-
-1. A base priority is assigned from the predicted or selected issue type.
-2. Priority is escalated further based on how long the ticket has been open.
-
-### Base Priority by Issue Type
-
-#### Critical
-
-- `Account Compromise`
-- `Malware / Virus Alert`
-- `Network Outage / Connectivity Issue`
-- `Server Down / Service Outage`
-
-#### High
-
-- `Account Lockout`
-- `Active Directory Issue`
-- `DNS / Network Resolution Issue`
-- `File Server Issue`
-- `MFA / 2FA Issue`
-- `OS / Boot Issue`
-- `Phishing Report`
-- `Suspicious Login`
-- `VM / Infrastructure Issue`
-- `VPN Issue`
-
-#### Medium
-
-- `Backup / Restore Issue`
-- `Disk Space / Storage Issue`
-- `Email Access Issue`
-- `Laptop/Desktop Hardware Issue`
-- `Mailbox / Email Sync Issue`
-- `Network Drive Access Issue`
-- `Password Reset`
-- `Security Policy Violation`
-- `Wi-Fi Connectivity Issue`
-
-#### Low
-
-- `Access Request`
-- `Basic Software Issue`
-- `Device Performance Issue`
-- `Peripheral / Docking Issue`
-- `Printer Issue`
-- `Software Installation Request`
-
-### Age-Based Escalation
-
-- Closed tickets are treated as `Low`.
-- After `24` hours, priority increases by one level.
-- After `48` hours, priority increases by two levels.
-- After `72` hours, the ticket becomes `Critical`.
-
-This policy is implemented in the backend and mirrored in the frontend for consistent display.
+- `ml/data/helpdesk_tickets_synthetic.csv`
+- `ml/data/helpdesk_tickets_unseen_test.csv`
 
 ## Key API Endpoints
 
+Authentication:
+
 - `POST /register`
 - `POST /login`
+
+Tickets:
+
 - `GET /tickets`
+- `GET /tickets/all`
+- `GET /tickets/assigned`
 - `POST /tickets`
 - `GET /tickets/{ticket_id}`
+- `PUT /tickets/{ticket_id}/assign/{technician_id}`
+- `PUT /tickets/{ticket_id}/status`
+- `PUT /tickets/{ticket_id}/category`
+- `GET /tickets/{ticket_id}/assist-users`
+
+Messages and attachments:
+
 - `GET /tickets/{ticket_id}/messages`
 - `POST /tickets/{ticket_id}/messages`
 - `POST /tickets/{ticket_id}/messages/upload`
 - `GET /tickets/{ticket_id}/messages/{message_id}/attachment`
+
+Notifications and health:
+
 - `GET /notifications`
 - `GET /notifications/unread-count`
+- `PUT /notifications/{notification_id}/read`
+- `PUT /notifications/read-all`
+- `GET /admin/stats`
+- `GET /public/metrics`
 - `GET /health`
 
-## Suggested Manual Test Flow
-
-For a quick demonstration, this sequence is enough:
+## Quick Demo Flow
 
 1. Start backend and frontend.
 2. Register a normal user account.
 3. Create a ticket with a realistic IT issue description.
-4. Confirm the ticket receives a predicted category, team, and priority.
-5. Log in as a technician and update the ticket status.
+4. Confirm the ticket receives a category, team, priority, and SLA state.
+5. Log in as a technician and update the ticket status or category.
 6. Send a ticket message and optionally upload an attachment.
-7. Log in as admin and verify dashboards, queue data, and notifications.
+7. Log in as admin and review the dashboards, notifications, and queue state.
 
 ## Troubleshooting
 
-### Login Fails With a Network Error
+### Login or Network Errors
 
 - confirm the backend is running on port `8000`
 - confirm the frontend is running on port `5173`
 - confirm `frontend/src/api.js` still points to `http://127.0.0.1:8000`
 
-### CORS Issues
+### CORS
 
-- the backend currently allows localhost/127.0.0.1 frontend origins
+- the backend allows localhost/127.0.0.1 frontend origins
 
-### Attachment Upload Issues
+### Attachments
 
 - the backend enforces a 10MB attachment size limit
 
-### ML Prediction Falls Back to Uncategorized
+### ML Prediction Falls Back to `Uncategorized`
 
-- this can happen if the model file is missing
-- it can also happen if the ticket description is too short or has too little useful signal
+- the model file may be missing
+- the description may be too short or too low-signal
