@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import EmptyState from "./EmptyState";
 import FilterBar from "./FilterBar";
+import { SkeletonTable } from "./Skeleton";
 import MetricCard from "./MetricCard";
 import PageHeader from "./PageHeader";
 import SectionCard from "./SectionCard";
@@ -59,6 +60,7 @@ function getHoursSince(value) {
 
 function TechDashboard() {
   const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
   const [teamSelections, setTeamSelections] = useState({});
   const [themeTick, setThemeTick] = useState(0);
@@ -70,6 +72,8 @@ function TechDashboard() {
       setTickets(response.data || []);
     } catch (error) {
       console.error("Error fetching assigned tickets:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -267,7 +271,9 @@ function TechDashboard() {
         </div>
       </FilterBar>
 
-      {filteredTickets.length === 0 ? (
+      {loading ? (
+        <SkeletonTable rows={6} cols={8} />
+      ) : filteredTickets.length === 0 ? (
         <EmptyState
           title="No assigned tickets match the current filters"
           description="Try a different status filter to widen the queue."

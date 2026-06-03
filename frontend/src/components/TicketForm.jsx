@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api";
 import SectionCard from "./SectionCard";
 import PageHeader from "./PageHeader";
@@ -22,6 +23,7 @@ function TicketForm() {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdTicketId, setCreatedTicketId] = useState(null);
 
   const descriptionWordCount = useMemo(() => {
     return description.trim() ? description.trim().split(/\s+/).length : 0;
@@ -33,14 +35,12 @@ function TicketForm() {
 
     setMessage("");
     setIsError(false);
+    setCreatedTicketId(null);
     setIsSubmitting(true);
 
     try {
-      await api.post("/tickets", {
-        title,
-        description,
-      });
-
+      const res = await api.post("/tickets", { title, description });
+      setCreatedTicketId(res.data?.id ?? null);
       setMessage("Ticket submitted successfully!");
       setTitle("");
       setDescription("");
@@ -141,6 +141,9 @@ function TicketForm() {
           {message && (
             <p className={`ticket-message ${isError ? "error" : "success"}`}>
               {message}
+              {!isError && createdTicketId != null && (
+                <> <Link to={`/tickets/${createdTicketId}`}>View Ticket #{createdTicketId}</Link></>
+              )}
             </p>
           )}
         </SectionCard>

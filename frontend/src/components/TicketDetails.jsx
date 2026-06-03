@@ -4,6 +4,7 @@ import api from "../api";
 import EmptyState from "./EmptyState";
 import PageHeader from "./PageHeader";
 import SectionCard from "./SectionCard";
+import { SkeletonTicket } from "./Skeleton";
 import { getPriorityExplanation } from "../utils/ticketVisuals";
 
 function fmtDate(value) {
@@ -76,19 +77,26 @@ function TicketDetails() {
     fetchAssistUsers();
   }, [id]);
 
+
   const sendMessage = async () => {
     if (!newMessage.trim() && !selectedFile) return;
     if (isPrivateMessage && !privateRecipientEmail) return;
 
     try {
-      const formData = new FormData();
-      formData.append("content", newMessage);
-      if (isPrivateMessage) formData.append("private_to_email", privateRecipientEmail);
-      if (selectedFile) formData.append("attachment", selectedFile);
-
-      await api.post(`/tickets/${id}/messages/upload`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("content", newMessage);
+        if (isPrivateMessage) formData.append("private_to_email", privateRecipientEmail);
+        formData.append("attachment", selectedFile);
+        await api.post(`/tickets/${id}/messages/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        await api.post(`/tickets/${id}/messages`, {
+          content: newMessage,
+          ...(isPrivateMessage && { private_to_email: privateRecipientEmail }),
+        });
+      }
 
       setNewMessage("");
       setIsPrivateMessage(false);
@@ -188,7 +196,11 @@ function TicketDetails() {
     );
   }
 
-  if (!ticket) return <p>Loading ticket...</p>;
+  if (!ticket) return (
+    <div className="ticket-card dashboard-card ticket-workspace-shell">
+      <SkeletonTicket />
+    </div>
+  );
 
   return (
     <div className="ticket-card dashboard-card ticket-workspace-shell">
@@ -283,7 +295,7 @@ function TicketDetails() {
                   return (
                     <div
                       key={msg.id}
-                      className={`chat-message ${isMine ? "left" : "right"} ${
+                      className={`chat-message ${isMine ? "right" : "left"} ${
                         msg.is_private ? "private-msg" : ""
                       }`}
                     >

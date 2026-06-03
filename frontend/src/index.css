@@ -13,7 +13,7 @@ body {
 
 body {
   margin: 0;
-  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
   font-size: var(--font-size-body, 1rem);
   line-height: var(--line-body, 1.6);
 
@@ -35,7 +35,7 @@ h4,
 h5,
 h6 {
   margin: 0;
-  font-family: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-family: "Inter", "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   line-height: var(--line-tight, 1.15);
   letter-spacing: var(--tracking-tight, -0.02em);
 }

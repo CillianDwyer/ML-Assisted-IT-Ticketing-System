@@ -48,8 +48,8 @@ class Ticket(Base):
     status = Column(String, default="Open")
     priority = Column(String, default="Low", nullable=False)
 
-    user_id = Column(Integer, ForeignKey("users.id"))
-    technician_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    technician_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     # timestamps (for analytics)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -86,8 +86,8 @@ class TicketMessage(Base):
     attachment_type = Column(String, nullable=True)
     attachment_size = Column(Integer, nullable=True)
 
-    ticket_id = Column(Integer, ForeignKey("tickets.id"))
-    sender_id = Column(Integer, ForeignKey("users.id"))
+    ticket_id = Column(Integer, ForeignKey("tickets.id"), index=True)
+    sender_id = Column(Integer, ForeignKey("users.id"), index=True)
     recipient_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     ticket = relationship("Ticket")

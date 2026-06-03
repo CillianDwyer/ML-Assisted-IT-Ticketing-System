@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException, Depends, status, Body, Path, Query, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, text, or_
 
 import models, database, schemas, auth
@@ -293,6 +293,24 @@ ensure_ticket_team_column()
 
 
 ensure_ticket_priority_column()
+
+
+def ensure_indexes():
+    db = database.SessionLocal()
+    try:
+        for stmt in [
+            "CREATE INDEX IF NOT EXISTS ix_tickets_user_id ON tickets (user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_tickets_technician_id ON tickets (technician_id)",
+            "CREATE INDEX IF NOT EXISTS ix_ticket_messages_ticket_id ON ticket_messages (ticket_id)",
+            "CREATE INDEX IF NOT EXISTS ix_ticket_messages_sender_id ON ticket_messages (sender_id)",
+        ]:
+            db.execute(text(stmt))
+        db.commit()
+    finally:
+        db.close()
+
+
+ensure_indexes()
 
 
 def refresh_ticket_priority(ticket: models.Ticket) -> bool:
@@ -759,59 +777,74 @@ def admin_stats(
 @app.get("/tickets/all", response_model=list[schemas.TicketResponse])
 def get_all_tickets(
     current_user: models.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    limit: int = Query(500, ge=1, le=2000),
+    offset: int = Query(0, ge=0),
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can view all tickets")
 
-    tickets = db.query(models.Ticket).all()
-    changed = False
+    tickets = (
+        db.query(models.Ticket)
+        .options(joinedload(models.Ticket.owner), joinedload(models.Ticket.technician))
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     for t in tickets:
-        changed = refresh_ticket_priority(t) or changed
+        refresh_ticket_priority(t)
         set_ticket_sla_state(t)
-        t.user_email = db.query(models.User.email).filter(models.User.id == t.user_id).scalar()
-        if t.technician_id:
-            t.technician_email = db.query(models.User.email).filter(models.User.id == t.technician_id).scalar()
-    if changed:
-        db.commit()
+        t.user_email = t.owner.email if t.owner else None
+        t.technician_email = t.technician.email if t.technician else None
     return tickets
 
 
 @app.get("/tickets", response_model=list[schemas.TicketResponse])
 def get_tickets(
     current_user: models.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    limit: int = Query(500, ge=1, le=2000),
+    offset: int = Query(0, ge=0),
 ):
-    tickets = db.query(models.Ticket).filter(models.Ticket.user_id == current_user.id).all()
-    changed = False
+    tickets = (
+        db.query(models.Ticket)
+        .options(joinedload(models.Ticket.owner), joinedload(models.Ticket.technician))
+        .filter(models.Ticket.user_id == current_user.id)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     for t in tickets:
-        changed = refresh_ticket_priority(t) or changed
+        refresh_ticket_priority(t)
         set_ticket_sla_state(t)
-        t.user_email = db.query(models.User.email).filter(models.User.id == t.user_id).scalar()
-        if t.technician_id:
-            t.technician_email = db.query(models.User.email).filter(models.User.id == t.technician_id).scalar()
-    if changed:
-        db.commit()
+        t.user_email = t.owner.email if t.owner else None
+        t.technician_email = t.technician.email if t.technician else None
     return tickets
 
 
 @app.get("/tickets/assigned", response_model=list[schemas.TicketResponse])
 def get_assigned_tickets(
     current_user: models.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    limit: int = Query(500, ge=1, le=2000),
+    offset: int = Query(0, ge=0),
 ):
     if current_user.role != "technician":
         raise HTTPException(status_code=403, detail="Only technicians can view assigned tickets")
 
-    tickets = db.query(models.Ticket).filter(models.Ticket.technician_id == current_user.id).all()
-    changed = False
+    tickets = (
+        db.query(models.Ticket)
+        .options(joinedload(models.Ticket.owner), joinedload(models.Ticket.technician))
+        .filter(models.Ticket.technician_id == current_user.id)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     for t in tickets:
-        changed = refresh_ticket_priority(t) or changed
+        refresh_ticket_priority(t)
         set_ticket_sla_state(t)
-        t.user_email = db.query(models.User.email).filter(models.User.id == t.user_id).scalar()
+        t.user_email = t.owner.email if t.owner else None
         t.technician_email = current_user.email
-    if changed:
-        db.commit()
     return tickets
 
 
@@ -821,20 +854,22 @@ def get_ticket_by_id(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    ticket = (
+        db.query(models.Ticket)
+        .options(joinedload(models.Ticket.owner), joinedload(models.Ticket.technician))
+        .filter(models.Ticket.id == ticket_id)
+        .first()
+    )
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     if not can_access_ticket(ticket, current_user, db):
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    changed = refresh_ticket_priority(ticket)
+    refresh_ticket_priority(ticket)
     set_ticket_sla_state(ticket)
-    ticket.user_email = db.query(models.User.email).filter(models.User.id == ticket.user_id).scalar()
-    if ticket.technician_id:
-        ticket.technician_email = db.query(models.User.email).filter(models.User.id == ticket.technician_id).scalar()
-    if changed:
-        db.commit()
+    ticket.user_email = ticket.owner.email if ticket.owner else None
+    ticket.technician_email = ticket.technician.email if ticket.technician else None
 
     return ticket
 

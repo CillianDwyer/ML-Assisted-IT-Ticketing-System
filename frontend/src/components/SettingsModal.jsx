@@ -1,0 +1,182 @@
+import React, { useEffect, useState } from "react";
+import SectionCard from "./SectionCard";
+import {
+  PREFERENCE_KEYS,
+  getPreference,
+  setMotionPreference,
+  setStartPagePreference,
+  setThemePreference,
+} from "../utils/preferences";
+
+const START_PAGE_OPTIONS = [
+  { value: "overview", label: "Overview", description: "Open the main summary page after sign-in." },
+  { value: "my-tickets", label: "My Tickets", description: "Jump straight to your submitted tickets." },
+  { value: "new-ticket", label: "Submit Ticket", description: "Open the ticket form immediately." },
+  { value: "queue", label: "Role Dashboard", description: "Open the technician or admin queue when your role has one." },
+];
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+      <path
+        d="M18 6 6 18M6 6l12 12"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SettingsModal({ onClose, onOpenModelDetails }) {
+  const role = localStorage.getItem("role") || "user";
+  const email = localStorage.getItem("email") || "Account";
+
+  const [theme, setTheme] = useState(() => getPreference(PREFERENCE_KEYS.theme, "light"));
+  const [motion, setMotion] = useState(() => getPreference(PREFERENCE_KEYS.motion, "standard"));
+  const [startPage, setStartPage] = useState(() => getPreference(PREFERENCE_KEYS.startPage, "overview"));
+
+  useEffect(() => {
+    const handlePreferenceChange = (event) => {
+      const { key, value } = event.detail || {};
+      if (key === PREFERENCE_KEYS.theme) setTheme(value);
+      if (key === PREFERENCE_KEYS.motion) setMotion(value);
+      if (key === PREFERENCE_KEYS.startPage) setStartPage(value);
+    };
+    window.addEventListener("app:preferences-changed", handlePreferenceChange);
+    return () => window.removeEventListener("app:preferences-changed", handlePreferenceChange);
+  }, []);
+
+  useEffect(() => {
+    const onEsc = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onEsc);
+    return () => document.removeEventListener("keydown", onEsc);
+  }, [onClose]);
+
+  const onThemeChange = (value) => { setTheme(value); setThemePreference(value); };
+  const onMotionChange = (value) => { setMotion(value); setMotionPreference(value); };
+  const onStartPageChange = (value) => { setStartPage(value); setStartPagePreference(value); };
+
+  return (
+    <div
+      className="settings-modal-overlay"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="settings-modal" role="dialog" aria-label="Settings">
+        <div className="settings-modal-header">
+          <div>
+            <div className="settings-modal-eyebrow">Workspace preferences</div>
+            <h2 className="settings-modal-title">Settings</h2>
+          </div>
+          <div className="settings-modal-header-right">
+            <div className="settings-account-card settings-modal-account">
+              <span className="settings-account-label">Signed in as</span>
+              <strong>{email}</strong>
+              <span className="settings-account-role">{role}</span>
+            </div>
+            <button className="settings-modal-close" onClick={onClose} aria-label="Close settings">
+              <CloseIcon />
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-modal-body">
+          <div className="settings-grid">
+            <SectionCard title="Appearance" className="settings-card">
+              <div className="settings-option-list">
+                <div className="settings-option">
+                  <div className="settings-option-copy">
+                    <h4>Theme</h4>
+                    <p>Switch between light and dark mode across the app.</p>
+                  </div>
+                  <div className="settings-segmented-control" role="radiogroup" aria-label="Theme">
+                    <button
+                      type="button"
+                      className={`settings-segment ${theme === "light" ? "active" : ""}`}
+                      onClick={() => onThemeChange("light")}
+                    >
+                      Light
+                    </button>
+                    <button
+                      type="button"
+                      className={`settings-segment ${theme === "dark" ? "active" : ""}`}
+                      onClick={() => onThemeChange("dark")}
+                    >
+                      Dark
+                    </button>
+                  </div>
+                </div>
+
+                <div className="settings-option">
+                  <div className="settings-option-copy">
+                    <h4>Motion</h4>
+                    <p>Reduce transitions and animation if you prefer a calmer interface.</p>
+                  </div>
+                  <div className="settings-segmented-control" role="radiogroup" aria-label="Motion">
+                    <button
+                      type="button"
+                      className={`settings-segment ${motion === "standard" ? "active" : ""}`}
+                      onClick={() => onMotionChange("standard")}
+                    >
+                      Standard
+                    </button>
+                    <button
+                      type="button"
+                      className={`settings-segment ${motion === "reduced" ? "active" : ""}`}
+                      onClick={() => onMotionChange("reduced")}
+                    >
+                      Reduced
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Start page" className="settings-card">
+              <div className="settings-radio-list" role="radiogroup" aria-label="Start page">
+                {START_PAGE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`settings-radio-card ${startPage === option.value ? "active" : ""}`}
+                    onClick={() => onStartPageChange(option.value)}
+                  >
+                    <div className="settings-radio-copy">
+                      <strong>{option.label}</strong>
+                      <span>{option.description}</span>
+                    </div>
+                    <span className="settings-radio-indicator" aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+
+          {role === "admin" && (
+            <SectionCard title="Admin tools" className="settings-card" style={{ marginTop: "var(--space-5)" }}>
+              <div className="settings-option">
+                <div className="settings-option-copy">
+                  <h4>ML model details</h4>
+                  <p>
+                    Open a hidden admin-only reference page showing the tested classifiers,
+                    the deployed model choice, and the main benefits and tradeoffs.
+                  </p>
+                </div>
+                <div className="settings-admin-actions">
+                  <button
+                    className="page-header-action"
+                    onClick={onOpenModelDetails}
+                  >
+                    View ML model details
+                  </button>
+                </div>
+              </div>
+            </SectionCard>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default SettingsModal;

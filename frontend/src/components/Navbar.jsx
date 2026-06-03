@@ -3,6 +3,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 import api from "../api";
 import logo from "../assets/logo1.png";
 import { PREFERENCE_KEYS, getPreference, setThemePreference } from "../utils/preferences";
+import SettingsModal from "./SettingsModal";
+import ModelDetailsModal from "./ModelDetailsModal";
 
 function BellIcon() {
   return (
@@ -88,6 +90,8 @@ function Navbar() {
   const navigate = useNavigate();
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showModelDetails, setShowModelDetails] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const menuRef = useRef(null);
@@ -161,7 +165,7 @@ function Navbar() {
     }
 
     fetchUnreadCount();
-    const id = setInterval(fetchUnreadCount, 15000);
+    const id = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(id);
   }, [token]);
 
@@ -190,6 +194,8 @@ function Navbar() {
         setMenuOpen(false);
         setNotifOpen(false);
         setMobileNavOpen(false);
+        setShowSettings(false);
+        setShowModelDetails(false);
       }
     };
 
@@ -470,7 +476,7 @@ function Navbar() {
                       className="user-dropdown-item"
                       onClick={() => {
                         closeMenus();
-                        navigate("/settings");
+                        setShowSettings(true);
                       }}
                     >
                       <GearIcon /> Settings
@@ -502,6 +508,20 @@ function Navbar() {
           </div>
         </div>
       </nav>
+
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          onOpenModelDetails={() => { setShowSettings(false); setShowModelDetails(true); }}
+        />
+      )}
+
+      {showModelDetails && (
+        <ModelDetailsModal
+          onClose={() => setShowModelDetails(false)}
+          onBack={() => { setShowModelDetails(false); setShowSettings(true); }}
+        />
+      )}
 
       {showConfirm && (
         <div className="logout-overlay">

@@ -4,6 +4,7 @@ import api from "../api";
 import EmptyState from "./EmptyState";
 import FilterBar from "./FilterBar";
 import PageHeader from "./PageHeader";
+import { SkeletonTable } from "./Skeleton";
 import {
   derivePriority,
   getTicketTeam,
@@ -22,6 +23,7 @@ function statusClassName(status) {
 function MyTickets() {
   const [tickets, setTickets] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,6 +33,8 @@ function MyTickets() {
         setTickets(response.data || []);
       } catch (error) {
         console.error("Error fetching tickets:", error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchTickets();
@@ -62,7 +66,9 @@ function MyTickets() {
         </div>
       </FilterBar>
 
-      {filteredTickets.length === 0 ? (
+      {loading ? (
+        <SkeletonTable rows={6} cols={8} />
+      ) : filteredTickets.length === 0 ? (
         <EmptyState
           title="No tickets match this view"
           description="Try a different status filter to see more of your tickets."
