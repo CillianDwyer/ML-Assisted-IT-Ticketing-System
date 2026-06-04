@@ -4,6 +4,35 @@ A full-stack IT support ticketing platform with role-based access and machine-le
 
 The system lets users submit support tickets, predicts an issue type from the ticket description, maps that issue type to a support team, and supports technician/admin workflows for triage, updates, messaging, notifications, and dashboards.
 
+## Screenshots
+
+### Submit Ticket
+![Submit Ticket](screenshots/submit-ticket.png)
+
+### My Tickets
+![My Tickets](screenshots/my-tickets.png)
+
+### Ticket Detail
+![Ticket Detail](screenshots/ticket-detail.png)
+
+### Ticket Detail — Expanded Info
+![Ticket Detail Expanded](screenshots/ticket-detail-expanded.png)
+
+### Technician Queue
+![Technician Queue](screenshots/technician-queue.png)
+
+### Notifications
+![Notifications](screenshots/notifications.png)
+
+### Admin Operations
+![Admin Operations](screenshots/admin-dashboard.png)
+
+### Analytics
+![Analytics](screenshots/analytics.png)
+
+### Settings
+![Settings](screenshots/settings.png)
+
 ## Stack
 
 - `backend/` - FastAPI API, SQLite database, authentication, ticket logic, notifications, uploads
