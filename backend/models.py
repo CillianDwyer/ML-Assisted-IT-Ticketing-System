@@ -1,10 +1,10 @@
 # models.py
 # Classes represent database tables
 
-from datetime import datetime
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
+from timeutils import utcnow
 
 
 class User(Base):
@@ -52,8 +52,8 @@ class Ticket(Base):
     technician_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     # timestamps (for analytics)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
     closed_at = Column(DateTime, nullable=True)
 
     # Clearly define relationships
@@ -79,7 +79,7 @@ class TicketMessage(Base):
 
     id = Column(Integer, primary_key=True)
     content = Column(String, nullable=False)
-    created_at = Column(String)
+    created_at = Column(DateTime, default=utcnow)
     is_private = Column(Boolean, default=False, nullable=False)
     attachment_name = Column(String, nullable=True)
     attachment_path = Column(String, nullable=True)
@@ -110,7 +110,7 @@ class Notification(Base):
     content = Column(String, nullable=False)
 
     is_read = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
     user = relationship("User", back_populates="notifications")
     ticket = relationship("Ticket", back_populates="notifications")

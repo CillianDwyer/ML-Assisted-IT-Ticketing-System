@@ -1,0 +1,394 @@
+/* =========================
+   DASHBOARD (AdminDashboard)
+========================= */
+
+/* Make dashboard slightly wider if you want */
+.dashboard-card {
+  max-width: 1320px;
+}
+
+.chart-wrap {
+  height: 260px; /* makes charts readable + consistent */
+}
+
+/* KPIs */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.kpi-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+}
+
+.metric-card-subtext {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+
+.section-card {
+  margin-top: var(--space-4);
+  padding: var(--panel-padding);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(248, 250, 252, 0.58) 100%
+  );
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .section-card {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.75) 0%,
+    rgba(15, 23, 42, 0.58) 100%
+  );
+}
+
+.section-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.section-card-header h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  letter-spacing: var(--tracking-tight);
+}
+
+.filter-bar {
+  margin-top: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dashboard-card > .page-header {
+  margin-bottom: var(--space-4);
+}
+
+.dashboard-card > .filter-bar {
+  margin-top: 0;
+  margin-bottom: var(--space-5);
+}
+
+.dashboard-card .ticket-filters {
+  margin: 0;
+}
+
+.empty-state {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 42%),
+    rgba(248, 250, 252, 0.55);
+}
+
+.dark .empty-state {
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 42%),
+    rgba(15, 23, 42, 0.45);
+}
+
+.empty-state strong {
+  color: var(--text);
+  font-size: var(--font-size-body);
+}
+
+.empty-state p {
+  margin: 0.45rem auto 0;
+  max-width: 46ch;
+}
+
+/* Charts */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-5);
+  margin: var(--space-4) 0;
+}
+
+.chart-card {
+  position: relative;
+  overflow: hidden;
+  padding: var(--panel-padding);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(248, 250, 252, 0.58) 100%
+  );
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.dark .chart-card {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.75) 0%,
+    rgba(15, 23, 42, 0.58) 100%
+  );
+}
+
+.chart-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(59, 130, 246, 0.32);
+}
+
+.chart-card h3 {
+  margin: var(--space-1) 0 var(--space-3);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text);
+}
+
+/* Optional: make Chart.js canvas not look “washed” */
+.chart-card canvas {
+  display: block;
+}
+
+.oldest-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+/* =========================
+   ADMIN TABLE (AdminDashboard)
+========================= */
+
+/* Wrapper handles border/shadow/radius + scrolling */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  background: var(--card);
+}
+
+/* Table is "flat" because wrapper handles decoration */
+.ticket-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  background: transparent;
+}
+
+.ticket-table th,
+.ticket-table td {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.92rem;
+}
+
+.ticket-table th {
+  background-color: rgba(226, 232, 240, 0.85);
+  color: #334155;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.dark .ticket-table th {
+  background-color: rgba(96, 165, 250, 0.14);
+  color: #cbd5e1;
+}
+
+.ticket-table tr:hover {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+.dark .ticket-table tr:hover {
+  background-color: rgba(96, 165, 250, 0.07);
+}
+
+/* Sticky header */
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Make columns behave */
+.admin-table {
+  table-layout: fixed; /* stops long emails blowing up layout */
+}
+
+.queue-table {
+  table-layout: fixed;
+}
+
+.queue-table th:nth-child(1),
+.queue-table td:nth-child(1) {
+  width: 80px;
+}
+
+.queue-table th:nth-child(3),
+.queue-table td:nth-child(3) {
+  width: 170px;
+}
+
+.queue-table th:nth-child(4),
+.queue-table td:nth-child(4),
+.queue-table th:nth-child(5),
+.queue-table td:nth-child(5) {
+  width: 110px;
+}
+
+/* Set reasonable widths */
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) {
+  width: 60px;
+} /* ID */
+
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) {
+  width: 110px;
+} /* Priority */
+
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6) {
+  width: 110px;
+} /* SLA */
+
+.admin-table th:nth-child(7),
+.admin-table td:nth-child(7) {
+  width: 120px;
+} /* Status */
+
+.admin-table th:nth-child(8),
+.admin-table td:nth-child(8) {
+  width: 180px;
+} /* Category */
+
+/* Keep long text tidy */
+.cell-email,
+.cell-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-title {
+  font-weight: 800;
+}
+
+.admin-triage-alert {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  background:
+    radial-gradient(circle at top left, rgba(248, 113, 113, 0.18), transparent 48%),
+    linear-gradient(180deg, rgba(254, 242, 242, 0.96) 0%, rgba(255, 247, 237, 0.96) 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .admin-triage-alert {
+  border-color: rgba(248, 113, 113, 0.28);
+  background:
+    radial-gradient(circle at top left, rgba(248, 113, 113, 0.2), transparent 48%),
+    linear-gradient(180deg, rgba(69, 10, 10, 0.82) 0%, rgba(31, 41, 55, 0.82) 100%);
+}
+
+.admin-triage-alert strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.98rem;
+}
+
+.admin-triage-alert span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-ticket-row.unassigned-ticket {
+  background:
+    linear-gradient(90deg, rgba(220, 38, 38, 0.18) 0 5px, transparent 5px),
+    rgba(254, 242, 242, 0.7);
+}
+
+.dark .admin-ticket-row.unassigned-ticket {
+  background:
+    linear-gradient(90deg, rgba(248, 113, 113, 0.3) 0 5px, transparent 5px),
+    rgba(69, 10, 10, 0.3);
+}
+
+.admin-ticket-row.unassigned-ticket:hover {
+  background:
+    linear-gradient(90deg, rgba(220, 38, 38, 0.26) 0 5px, transparent 5px),
+    rgba(254, 226, 226, 0.9);
+}
+
+.dark .admin-ticket-row.unassigned-ticket:hover {
+  background:
+    linear-gradient(90deg, rgba(248, 113, 113, 0.38) 0 5px, transparent 5px),
+    rgba(127, 29, 29, 0.38);
+}
+
+.unassigned-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.16);
+  color: #991b1b;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.dark .unassigned-pill {
+  background: rgba(248, 113, 113, 0.22);
+  color: #fecaca;
+}
+
+/* Make selects smaller in table */
+.ticket-table select {
+  min-width: 0;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+}
+
+/* Optional: slightly nicer table on very small screens */
+@media (max-width: 640px) {
+  .ticket-table th,
+  .ticket-table td {
+    padding: 0.7rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+

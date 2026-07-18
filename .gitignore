@@ -8,6 +8,13 @@ __pycache__/
 # Environment variables
 .env
 
+# Local data — never commit the live database or user uploads
+*.db
+backend/uploads/
+
+# Training artifact lives only in backend/ml/ (runtime copy)
+ml/ticket_classifier.pkl
+
 # Frontend dependencies
 frontend/node_modules/
 

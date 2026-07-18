@@ -1,11 +1,17 @@
-fastapi
-uvicorn
-sqlalchemy
-pydantic
-python-multipart
-passlib[bcrypt]
-python-jose[cryptography]
-email-validator
-joblib
-pandas
+fastapi==0.128.0
+uvicorn==0.40.0
+sqlalchemy==2.0.46
+pydantic==2.12.5
+python-multipart==0.0.21
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2  # passlib 1.7.x breaks with bcrypt>=4, keep pinned together
+python-jose[cryptography]==3.5.0
+email-validator==2.3.0
+joblib==1.5.3
 scikit-learn==1.7.2
+
+# training scripts only (ml/train_model.py, ml/testing.py)
+pandas
+
+# tests
+pytest

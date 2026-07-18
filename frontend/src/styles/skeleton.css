@@ -1,0 +1,100 @@
+/* =========================
+   SKELETON LOADERS
+========================= */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+
+.skeleton-cell {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 1600px 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Table skeleton */
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.skeleton-table-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 1rem var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.skeleton-table-row .skeleton-cell {
+  height: 13px;
+  flex: 1;
+}
+
+.skeleton-table-row .skeleton-cell:first-child  { flex: 0 0 36px; }
+.skeleton-table-row .skeleton-cell:nth-child(2) { flex: 2.5; }
+.skeleton-table-row .skeleton-cell:nth-child(3),
+.skeleton-table-row .skeleton-cell:nth-child(6),
+.skeleton-table-row .skeleton-cell:nth-child(7) {
+  flex: 0 0 74px;
+  height: 22px;
+  border-radius: 999px;
+}
+
+/* Ticket detail skeleton */
+.skeleton-ticket-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-5);
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 42%),
+    var(--card);
+}
+
+.skeleton-ticket-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.skeleton-ticket-stat .skeleton-label { height: 10px; width: 55%; }
+.skeleton-ticket-stat .skeleton-value { height: 20px; width: 75%; border-radius: 999px; }
+
+.skeleton-ticket-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: rgba(249, 250, 251, 0.9);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  min-height: 320px;
+}
+
+.dark .skeleton-ticket-body {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.skeleton-msg {
+  height: 58px;
+  max-width: 62%;
+  border-radius: 14px;
+}
+
+.skeleton-msg-left  { align-self: flex-start; }
+.skeleton-msg-right { align-self: flex-end; }
+

@@ -37,6 +37,16 @@ pip install -r requirements.txt
 uvicorn main:app
 ```
 
+Optional: set a `SECRET_KEY` environment variable for stable JWT sessions across
+restarts (without it a random key is generated per start, which logs everyone out).
+
+**Backend tests**:
+
+```bash
+cd backend
+python -m pytest
+```
+
 **Frontend** (port 5173):
 
 ```bash
@@ -44,6 +54,9 @@ cd frontend
 npm install
 npm run dev
 ```
+
+The frontend targets `http://127.0.0.1:8000` by default; set `VITE_API_URL` in
+`frontend/.env` to point elsewhere.
 
 ## Demo Accounts
 
@@ -62,7 +75,7 @@ Regular users can register from the UI.
 
 ## How It Works
 
-On ticket submission the backend predicts an issue type from the description, maps it to a support team, sets a base priority, and assigns a technician if one exists for that team. Priority escalates with ticket age (one level at 24h, two at 48h, Critical at 72h). SLA state is derived from age versus the target window.
+On ticket submission the backend predicts an issue type from the description, maps it to a support team, sets a base priority, and assigns the least-loaded technician on that team. Low-confidence predictions are routed to an Admin Review Queue instead of guessing. Priority escalates with ticket age (one level at 24h, two at 48h, Critical at 72h). SLA state is derived from age versus the target window.
 
 ## Machine Learning
 

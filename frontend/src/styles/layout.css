@@ -1,0 +1,153 @@
+/* =========================
+   APP LAYOUT SHELL
+========================= */
+.app-shell {
+  min-height: calc(100vh - 72px);
+  padding: var(--space-7) var(--space-6);
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.route-transition-shell {
+  animation: routeFadeSlideIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: top center;
+  will-change: opacity, transform;
+}
+
+@keyframes routeFadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive padding */
+@media (max-width: 640px) {
+  .app-shell {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .ticket-card {
+    padding: var(--space-6);
+    margin: var(--space-5) auto;
+  }
+
+  .ticket-summary-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .compose-actions-row,
+  .compose-footer,
+  .ticket-workspace-topline {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .compose-attach-btn,
+  .page-header-action {
+    align-self: flex-start;
+  }
+}
+
+/* =========================
+   FOOTER
+========================= */
+.app-footer {
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.dark .app-footer {
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.footer-compact {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.footer-brand {
+  min-width: 0;
+}
+
+.footer-logo {
+  font-weight: 900;
+  letter-spacing: var(--tracking-tight);
+  font-size: var(--font-size-md);
+  color: var(--text);
+}
+
+.footer-sub {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.footer-compact-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.footer-link {
+  text-decoration: none;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  transition: color 0.15s ease;
+}
+
+.footer-link:hover {
+  color: var(--text);
+}
+
+.footer-meta {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 640px) {
+  .footer-compact {
+    padding: var(--space-4) var(--space-4);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-transition-shell {
+    animation: none;
+  }
+
+  .overview-carousel-viewport {
+    scroll-behavior: auto;
+  }
+
+  .overview-carousel-slide {
+    transition: none;
+  }
+}
+
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+

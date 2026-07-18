@@ -1,0 +1,200 @@
+/* =========================
+   USER MENU (Navbar)
+========================= */
+.user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 0;
+  min-width: 0;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+
+  padding: 0.45rem 0.7rem 0.45rem 0.9rem;
+  border-radius: var(--radius-pill);
+
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  min-width: 0;
+  max-width: 320px;
+
+  transition: background-color 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.user-chip:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.user-email {
+  font-weight: 800;
+  font-size: var(--font-size-sm);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-role {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 900;
+  opacity: 0.92;
+  padding: 0.18rem 0.45rem;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.88);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.user-caret {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.68);
+  opacity: 1;
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: min(280px, 85vw);
+
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  z-index: 2100;
+}
+
+.user-dropdown-header {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 42%),
+    rgba(248, 250, 252, 0.75);
+}
+
+.dark .user-dropdown-header {
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.14), transparent 42%),
+    rgba(15, 23, 42, 0.78);
+}
+
+.user-dropdown-email {
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.user-dropdown-role {
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.user-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.user-dropdown-item {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+
+  color: var(--text);
+  font-weight: 800;
+
+  transition: background-color 0.15s ease;
+}
+
+.user-dropdown-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.user-dropdown-item.danger {
+  color: #b91c1c;
+}
+
+.dark .user-dropdown-item.danger {
+  color: #fca5a5;
+}
+
+.user-dropdown-item.danger:hover {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+/* Small screens: hide long email */
+@media (max-width: 640px) {
+  .user-email {
+    max-width: 90px;
+  }
+}
+
+@media (max-width: 920px) {
+  .nav-inner {
+    align-items: flex-start;
+  }
+
+  .nav-main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .nav-brand-row {
+    justify-content: space-between;
+  }
+
+  .nav-mobile-toggle {
+    display: inline-flex;
+  }
+
+  .nav-links-wrap {
+    display: none;
+    width: 100%;
+  }
+
+  .nav-links-wrap.open {
+    display: block;
+  }
+
+  .nav-list {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .nav-item {
+    display: block;
+    width: 100%;
+  }
+
+  .nav-actions {
+    align-self: flex-end;
+    margin-top: 0.2rem;
+  }
+}
+

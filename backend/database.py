@@ -2,8 +2,7 @@
 #Handles db connection and session handling
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 # SQLite database URL
 SQLALCHEMY_DATABASE_URL = "sqlite:///./tickets.db"

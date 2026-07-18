@@ -65,7 +65,7 @@ class MessageResponse(BaseModel):
     content: str
     sender_id: int
     sender_email: str
-    created_at: str
+    created_at: datetime
     is_private: bool
     recipient_email: Optional[str] = None
     attachment_name: Optional[str] = None

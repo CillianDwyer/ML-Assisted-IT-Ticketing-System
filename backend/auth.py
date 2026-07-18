@@ -1,18 +1,21 @@
 # auth.py
 # Handles password hasing, JWT token creation and verifying logged-in users.
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 import os
+import secrets
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import models
-from database import get_db  
+from database import get_db
+from timeutils import utcnow
 
-#demo-friendly fallback: can be overridden in environment.
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
+# Set SECRET_KEY in the environment for stable sessions; the random fallback
+# means a restart logs everyone out rather than shipping a guessable default.
+SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
@@ -30,7 +33,7 @@ def verify_password(plain_password: str, hashed_password: str):
 # Create JWT token so user can stay logged in
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    expire = utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 

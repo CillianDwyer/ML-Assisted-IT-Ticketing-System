@@ -7,7 +7,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import TicketForm from "./components/TicketForm";
-import MyTickets from "./components/Mytickets";
+import MyTickets from "./components/MyTickets";
 import About from "./components/About";
 import Login from "./components/Login";
 import Register from "./components/Register";
@@ -44,10 +44,9 @@ function RoleRoute({ allowedRoles, children }) {
 
 function AppRoutes() {
   const location = useLocation();
-  const routeKey = `${location.pathname}${location.search}`;
 
   return (
-    <div key={routeKey} className="route-transition-shell">
+    <div className="route-transition-shell">
       <Routes location={location}>
         <Route
           path="/"
